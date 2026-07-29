@@ -152,6 +152,7 @@ body.noscan::before{display:none}
 #status-panel{flex:0 0 auto;min-height:150px;max-height:34%;display:flex;flex-direction:column}
 #mvitals{display:none}
 /* ── MINIMAPA: en ESCRITORIO flota sobre la esquina del mapa ── */
+#viewport-panel{position:relative}
 #minimap{
   display:none; position:absolute; right:10px; bottom:10px; z-index:40;
   background:rgba(6,6,6,0.94); border:1px solid var(--line-bright);
@@ -163,19 +164,20 @@ body.noscan::before{display:none}
 #minimap .mm-t{display:block;font-size:8px;color:var(--ink-dim);margin-bottom:3px;letter-spacing:1px}
 #col-left{position:relative}
 @media (max-width:700px){
-  /* En móvil el minimapa NO se superpone (tapaba las barras y el mapa).
-     Va como franja propia bajo el viewport, con letra legible. */
+  /* En móvil el minimapa FLOTA en la esquina superior derecha del mapa, sin
+     empujar el viewport (antes se metía como franja y achicaba la ventana).
+     Semitransparente y compacto para no tapar el juego. */
   #minimap{
-    position:static; right:auto; bottom:auto;
-    max-width:100%; max-height:24vh;
-    font-size:9px; line-height:1.05;
-    border:0; border-top:1px solid var(--line-bright);
-    background:var(--bg);
-    padding:4px 8px;
-    overflow:auto; -webkit-overflow-scrolling:touch;
-    flex:0 0 auto;
+    position:absolute; top:6px; right:6px; bottom:auto; left:auto; z-index:45;
+    max-width:42%; max-height:38%;
+    font-size:8px; line-height:1.02;
+    border:1px solid var(--line-bright);
+    background:rgba(6,6,6,0.90);
+    padding:4px 5px;
+    overflow:hidden;
   }
   #minimap.on{display:block}
+  #minimap .mm-t{font-size:7px;margin-bottom:2px}
 }
 #status-panel .panel-body{overflow-y:auto;flex:1;min-height:0}
 #col-right{flex:1;display:flex;flex-direction:column;gap:8px;min-height:0}
@@ -194,7 +196,12 @@ body.noscan::before{display:none}
   overflow:hidden;
   text-align:left;
 }
-#viewport .vp-row{display:block;height:21px;white-space:nowrap}
+/* La fila del mapa NO lleva altura fija: al hacer zoom la fuente crece y una
+   altura de 21px fija hacía que las filas se solaparan (muros montándose sobre
+   los pasillos). Con line-height:1 y height:auto, la fila mide justo lo que la
+   fuente, sea cual sea el zoom. */
+#viewport .vp-row{display:block;height:auto;line-height:1;white-space:nowrap}
+#viewport{line-height:1}
 /* ═══ COMBATE EN 3 ZONAS: eje fijo arriba · lista con scroll · TÚ fijo abajo ═══
    Antes todo era una sola columna y tu bloque quedaba al final, fuera de la
    pantalla en cuanto había varios enemigos y aliados. */
@@ -215,12 +222,25 @@ body.noscan::before{display:none}
   margin-top:4px;padding-top:5px;
   background:var(--bg);
 }
+/* ── Bloque del jugador en combate: estructura flex, NADA se superpone ── */
+.cb-self-inner{display:flex;flex-direction:column;gap:3px}
+.cb-self-name{font-size:13px;line-height:1.2}
+.cb-self-vital{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cb-self-vital .cb-atb{white-space:nowrap;flex:0 0 auto}
+/* fila de recursos: chips que se ENVUELVEN solos cuando no caben */
+.cb-res-row{display:flex;flex-wrap:wrap;gap:6px 12px}
+.cb-res{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.cb-res .cb-resbar{
+  display:inline-block;position:relative;width:70px;height:9px;flex:0 0 auto;
+  background:#0b0b09;border:1px solid var(--line-bright);overflow:hidden;vertical-align:middle;
+}
+.cb-res .cb-resbar i{position:absolute;left:0;top:0;bottom:0;transition:width .25s}
 /* las filas de las zonas de combate no usan la rejilla de 1ch del mapa */
 .cb-list .vp-row span, .cb-self .vp-row span, .cb-axis span{width:auto}
 .cb-list .vp-row, .cb-self .vp-row{white-space:normal}
 /* FIX Android: glifos Unicode de ancho variable rompían la alineación
    de columnas ("mapa mal generado"). Cada celda mide exactamente 1ch. */
-#viewport .vp-row span{display:inline-block;width:1ch;overflow:visible;text-align:center;vertical-align:top}
+#viewport .vp-row span{display:inline-block;width:1ch;height:1em;line-height:1;overflow:hidden;text-align:center;vertical-align:top}
 
 /* log / message panel */
 /* ===== FEEDBACK VISUAL DE COMBATE ===== */
@@ -281,10 +301,10 @@ body.noscan::before{display:none}
 .cb-glyph{will-change:transform,color}
 /* ===== EJE TÁCTICO DE DISTANCIA (combate) ===== */
 .dist-wrap{display:block;margin:2px 10px 10px}
-.dist-track{position:relative;height:24px;border:1px solid var(--line-bright);background:#0c0c0c;overflow:hidden}
+.dist-track{position:relative;height:52px;border:1px solid var(--line-bright);background:#0c0c0c;overflow:hidden}
 .dist-track .dr{position:absolute;top:0;bottom:0;background:rgba(255,190,80,.14);border-left:1px solid var(--amber);border-right:1px solid var(--amber);pointer-events:none}
-.dist-track .dt{position:absolute;top:68%;bottom:0;width:1px;background:var(--line)}
-.dist-track .di{position:absolute;top:2px;transform:translateX(-50%);font-weight:bold;font-size:14px;text-shadow:0 0 4px #000}
+.dist-track .dt{position:absolute;top:0;bottom:0;width:1px;background:var(--line);opacity:0.4}
+.dist-track .di{position:absolute;transform:translateX(-50%);font-weight:bold;font-size:15px;text-shadow:0 0 4px #000,0 0 2px #000;transition:left .2s ease-out}
 .dist-track .di.pl{color:var(--amber-glow);z-index:3}
 .dist-track .di.en{color:var(--red-bright,#d05050);z-index:2}
 .dist-track .di.al{color:var(--green);z-index:2}
@@ -754,7 +774,13 @@ body.noscan::before{display:none}
     border-top:1px solid var(--line-bright);
     margin-top:5px;padding-top:6px;
     background:var(--bg);
+    max-height:40%;overflow-y:auto;
   }
+  /* barras del jugador más estrechas en móvil para que quepan sin desbordar */
+  #viewport.combat-mode .cb-self .hpbar-wrap{width:110px;height:11px}
+  #viewport.combat-mode .cb-self .cb-resbar{width:64px;height:11px}
+  #viewport.combat-mode .cb-self-name{font-size:13px}
+  #viewport.combat-mode .cb-res-row{gap:4px 10px}
 }
 
 /* móviles bajos (poca altura): crónica aún más mínima */
@@ -818,8 +844,8 @@ body.noscan::before{display:none}
             style="cursor:pointer;margin-left:8px;padding:2px 10px;border:1px solid var(--line-bright);border-radius:4px;user-select:none;font-size:12px">?</span>
         </div>
         <div id="viewport"></div>
+        <div id="minimap"></div>
       </div>
-      <div id="minimap"></div>
       <div id="mvitals"></div>
     </div>
 
@@ -8601,7 +8627,9 @@ function applyBiomeTurnEffects(){
 function playerCbid(){ return G.combat?G.combat.combatants.findIndex(c=>c.isPlayer):-1; }
 function playerCb(){ return G.combat?G.combat.combatants.find(x=>x.isPlayer):null; }
 function ensurePos(cb){
-  if(cb.pos===undefined) cb.pos = cb.isPlayer?2 : (cb.isEnemy?rint(4,9):2);
+  // posición por defecto FIJA (antes rint(4,9) daba saltos aleatorios entre renders):
+  // jugador cerca del muro (2), enemigos al fondo (8), aliados junto al jugador (3)
+  if(cb.pos===undefined) cb.pos = cb.isPlayer?2 : (cb.isEnemy?8:3);
   return cb.pos;
 }
 // mover como ACCIÓN del jugador (avanzar hacia 10 / retroceder hacia 0)
@@ -8705,6 +8733,7 @@ function startCombat(triggerEnemy){
   let _nameCount={};
   for(let e of pack){ _nameCount[e.name]=(_nameCount[e.name]||0)+1; }
   let _nameSeen={};
+  let _meleeSlot=0, _rangedSlot=0;
   for(let e of pack){
     let dispName=e.name;
     if(_nameCount[e.name]>1){
@@ -8712,9 +8741,15 @@ function startCombat(triggerEnemy){
       dispName=e.name+' '+(_grk[k-1]||k);
       e._suffix=_grk[k-1]||(''+k);   // guardar en el enemigo para el mapa/etiquetas
     }
+    // Posición inicial ORDENADA (antes rint(4,9) los amontonaba a todos juntos):
+    // los de distancia se colocan al fondo (8,9,10), los de cuerpo a cuerpo más
+    // cerca (5,6,7), y se escalonan para no solaparse en la misma casilla.
+    let _pos;
+    if(e.ai==='ranged'||e.ai==='caster'){ _pos=Math.min(10, 8+_rangedSlot); _rangedSlot++; }
+    else { _pos=Math.min(9, 5+_meleeSlot); _meleeSlot++; }
     combatants.push({isEnemy:true, side:'enemy', ref:e, name:dispName,
                      glyph:e.glyph, color:e.color, init:Math.max(1,Math.round((e.speed||1)*3*(1-(e._spdPenalty||0))))+rint(1,6),
-                     pos:rint(4,9)});
+                     pos:_pos});
   }
   // ordenar por iniciativa (mayor primero)
   combatants.sort((a,b)=>b.init-a.init);
@@ -14059,13 +14094,27 @@ function distanceBarHTML(c){
   // marcas 0..10
   let ticks='';
   for(let i=0;i<=10;i++) ticks+=`<div class="dt" style="left:${i*10}%"></div>`;
-  // fichas de los combatientes
-  let icons='';
+  // fichas de los combatientes.
+  // Si varios comparten la MISMA posición, se apilan verticalmente en vez de
+  // dibujarse uno encima de otro (antes todos quedaban en la misma línea y
+  // parecía que nadie se movía / que todos estaban juntos).
+  let porPos={};
   for(const cb of c.combatants){
     if(!aliveCombatant(cb))continue;
-    if(cb.pos===undefined)cb.pos=cb.isPlayer?2:(cb.isEnemy?rint(4,9):2);
-    let cls=cb.isPlayer?'pl':(cb.isEnemy?'en':'al');
-    icons+=`<span class="di ${cls}" style="left:${cb.pos*10}%" title="${cb.name} · posición ${cb.pos}">${cb.isPlayer?'@':cb.glyph}</span>`;
+    if(cb.pos===undefined)cb.pos=cb.isPlayer?2:(cb.isEnemy?8:3);
+    (porPos[cb.pos]=porPos[cb.pos]||[]).push(cb);
+  }
+  let icons='';
+  for(const pos in porPos){
+    let grupo=porPos[pos];
+    // el jugador siempre arriba del grupo; enemigos y aliados debajo
+    grupo.sort((a,b)=> (b.isPlayer?1:0)-(a.isPlayer?1:0));
+    for(let j=0;j<grupo.length;j++){
+      let cb=grupo[j];
+      let cls=cb.isPlayer?'pl':(cb.isEnemy?'en':'al');
+      let topOff = 2 + j*15;   // cada ficha en su fila dentro de la misma columna
+      icons+=`<span class="di ${cls}" style="left:${cb.pos*10}%;top:${topOff}px" title="${cb.name} · posición ${cb.pos}">${cb.isPlayer?'@':cb.glyph}</span>`;
+    }
   }
   return `<div class="dist-wrap">
     <div class="dist-track">${bands}${ticks}${icons}</div>
@@ -14127,7 +14176,7 @@ function renderCombat(){
       lines.map(l=>'<span class="vp-row" style="height:auto;line-height:1.35">'+l+'</span>').join('')+
     '</div>'+
     '<div class="cb-self">'+
-      '<span class="vp-row" style="height:auto;line-height:1.35">'+renderPlayerBlock(pc, actor)+'</span>'+
+      renderPlayerBlock(pc, actor)+
     '</div>';
   // reposicionar la capa de FX sobre el viewport
   if(typeof positionFXLayer==='function') positionFXLayer();
@@ -14181,7 +14230,7 @@ function renderPlayerBlock(pc, actor){
   let p=G.player;
   let isTurn=(pc===actor);
   let col=getCssVar('--amber-glow');
-  let marker = isTurn ? span2('▸ ','--amber-glow') : '  ';
+  let marker = isTurn ? span2('▸ ','--amber-glow') : '';
   let _pid = G.combat?G.combat.combatants.indexOf(pc):-1;
   let nameLine = marker+`<span class="cb-glyph" id="cbg-${_pid}" style="color:${col}${isTurn?';text-shadow:0 0 6px '+col:''};display:inline-block;transition:transform .12s,color .12s">@ ${p.name}</span>`;
   let st=statusIconsBig(p);
@@ -14192,32 +14241,6 @@ function renderPlayerBlock(pc, actor){
   let hpCol=hpPct>0.5?'--green':hpPct>0.25?'--amber':'--red';
   let bar=hpBarHTML(hpPct, hpCol, Math.ceil(p.hp)+'/'+p.hpMax, '--ink-bright');
 
-  // recursos secundarios — CADA UNO EN SU RENGLÓN (en móvil compartir renglón
-  // hacía que las barras desbordaran y se montaran sobre el ATB)
-  let resLines=[];
-  if(classUsesMagic()){
-    let kPct=p.kros/p.krosMax;
-    resLines.push('<span class="hpbar-wrap"><span class="hpbar-fill" style="width:'+Math.round(Math.max(0,Math.min(1,kPct))*100)+'%;background:'+getCssVar('--cyan')+'"></span></span>'+
-        ' <span style="color:'+getCssVar('--cyan')+'" class="small">Kros '+Math.floor(p.kros)+'/'+p.krosMax+'</span>');
-    // CALOR: renglón propio, con etiqueta legible «♨ US nn%» (antes: un ♨ suelto)
-    if(p.us){ let hPct=Math.min(1,(p.heat||0)/p.us);
-      if(hPct>0.25){
-        let hCol=hPct>=1?'--red-bright':hPct>0.8?'--red':'--amber';
-        resLines.push('<span class="hpbar-wrap" style="width:100px"><span class="hpbar-fill" style="width:'+Math.round(hPct*100)+'%;background:'+getCssVar(hCol)+'"></span></span>'+
-          ' <span style="color:'+getCssVar(hCol)+'" class="small" title="Calor de canalización: al superar tu Umbral de Sobrecarga (US) te dañas">♨ US '+Math.round(hPct*100)+'%</span>');
-      } }
-  }
-  // ALIENTO: todo el que no sea mago puro lo usa para sus habilidades físicas —
-  // incluye al vagabundo (o cualquier clase) con la magia despertada
-  if(p.cls!=='magic' && (p.staminaMax||0)>0){
-    let sPct=(p.stamina||0)/(p.staminaMax||1);
-    resLines.push('<span class="hpbar-wrap"><span class="hpbar-fill" style="width:'+Math.round(Math.max(0,Math.min(1,sPct))*100)+'%;background:'+getCssVar('--green')+'"></span></span>'+
-        ' <span style="color:'+getCssVar('--green')+'" class="small">Aliento '+(p.stamina||0)+'/'+(p.staminaMax||0)+'</span>');
-  }
-  // Los recursos secundarios van EN LÍNEA (antes cada uno en su renglón, lo que
-  // hacía que el bloque del jugador ocupara media pantalla en combate).
-  let res=resLines.join(' &nbsp; ');
-
   // barra ATB del jugador
   let atbPct=Math.min(1,(pc&&pc.atb||0)/100);
   let aw=12, af=Math.round(atbPct*aw);
@@ -14226,8 +14249,31 @@ function renderPlayerBlock(pc, actor){
              '<span class="small" style="color:'+getCssVar('--line')+'">'+'▯'.repeat(aw-af)+'</span>'+
              (atbPct>=1?' <span class="small c-amber">¡LISTO!</span>':'');
 
-  // vida y ATB comparten renglón: el estado vital de un vistazo
-  return nameLine+'<br>'+bar+' &nbsp; '+atbBar+(res?'<br>'+res:'');
+  // ── recursos secundarios: cada uno como "chip" con barra propia ──
+  // Se colocan en un contenedor FLEX con wrap: así nunca se solapan, se apilan
+  // solos cuando no caben (el bug era concatenarlos inline y que desbordaran).
+  let chips=[];
+  if(classUsesMagic()){
+    let kPct=p.kros/p.krosMax;
+    chips.push('<span class="cb-res"><span class="cb-resbar"><i style="width:'+Math.round(Math.max(0,Math.min(1,kPct))*100)+'%;background:'+getCssVar('--cyan')+'"></i></span><span class="small" style="color:'+getCssVar('--cyan')+'">Kros '+Math.floor(p.kros)+'/'+p.krosMax+'</span></span>');
+    if(p.us){ let hPct=Math.min(1,(p.heat||0)/p.us);
+      if(hPct>0.25){
+        let hCol=hPct>=1?'--red-bright':hPct>0.8?'--red':'--amber';
+        chips.push('<span class="cb-res"><span class="cb-resbar"><i style="width:'+Math.round(hPct*100)+'%;background:'+getCssVar(hCol)+'"></i></span><span class="small" style="color:'+getCssVar(hCol)+'" title="Calor de canalización">♨ '+Math.round(hPct*100)+'%</span></span>');
+      } }
+  }
+  if(p.cls!=='magic' && (p.staminaMax||0)>0){
+    let sPct=(p.stamina||0)/(p.staminaMax||1);
+    chips.push('<span class="cb-res"><span class="cb-resbar"><i style="width:'+Math.round(Math.max(0,Math.min(1,sPct))*100)+'%;background:'+getCssVar('--green')+'"></i></span><span class="small" style="color:'+getCssVar('--green')+'">Aliento '+(p.stamina||0)+'/'+(p.staminaMax||0)+'</span></span>');
+  }
+  let resBlock = chips.length ? '<div class="cb-res-row">'+chips.join('')+'</div>' : '';
+
+  // Estructura en filas claras: nombre · [vida | ATB] · recursos
+  return '<div class="cb-self-inner">'+
+    '<div class="cb-self-name">'+nameLine+'</div>'+
+    '<div class="cb-self-vital">'+bar+'<span class="cb-atb">'+atbBar+'</span></div>'+
+    resBlock+
+    '</div>';
 }
 
 // ============================================================
@@ -14381,7 +14427,14 @@ function freqOf(n){
   return null;
 }
 let _ctx=null;
-function ctx(){ if(!_ctx){ try{_ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){_ctx=null;} } return _ctx; }
+function ctx(){
+  if(!_ctx){ try{_ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){_ctx=null;} }
+  // Los navegadores crean el contexto en estado 'suspended' hasta que hay un
+  // gesto del usuario. Reanudarlo aquí (es idempotente) asegura que, en cuanto
+  // haya interacción, el audio empiece a sonar de verdad.
+  if(_ctx && _ctx.state==='suspended'){ try{ _ctx.resume(); }catch(e){} }
+  return _ctx;
+}
 let _noiseBuf=null;
 function noiseBuf(c){
   if(!_noiseBuf){ const len=Math.floor(c.sampleRate*1.2); _noiseBuf=c.createBuffer(1,len,c.sampleRate);
@@ -14842,7 +14895,13 @@ window.updateMadnessDrone=updateMadnessDrone;
 // tone: un oscilador con envolvente rápida. Opcionalmente hace glide de freq→toFreq.
 // noise: una ráfaga de ruido filtrado. Ambos se limpian solos (stop programado),
 // así que no acumulan nodos ni traban el hilo por más que se disparen seguido.
-function _sfxCtx(){ return (window.VSynth&&VSynth.ctx)?VSynth.ctx():null; }
+function _sfxCtx(){
+  let c=(window.VSynth&&VSynth.ctx)?VSynth.ctx():null;
+  // En móvil el contexto puede estar 'suspended' o 'interrupted' (Android/iOS).
+  // Reanudarlo aquí, en el mismo hilo del efecto, maximiza que suene.
+  if(c && c.state!=='running'){ try{ c.resume(); }catch(e){} }
+  return c;
+}
 // El volumen de los EFECTOS es INDEPENDIENTE del de la música: usa el ajuste
 // propio del jugador (G.settings.volume, 0..1). Antes esto devolvía el masterVol
 // de la música, lo que acoplaba ambos controles por error.
@@ -14929,28 +14988,66 @@ function playFootstep(){
 }
 window.playFootstep=playFootstep;
 window.sfx=sfx;
-// calentar el AudioContext en el primer gesto (touch/tecla): su creación puede
-// tardar 50-100ms en móvil y antes ocurría EN el primer paso (tirón perceptible)
+// DESBLOQUEO DEL AUDIO — crítico en Android/Chrome.
+// El AudioContext nace 'suspended' y solo se reanuda dentro de un gesto real.
+// CLAVE: resume() es ASÍNCRONO. Justo después de llamarlo, ctx.state sigue
+// siendo 'suspended' hasta que su promesa se resuelve. Por eso hay que actuar
+// en el .then() de la promesa, NO comprobar el estado en la misma línea.
 (function(){
-  let warm=()=>{ try{ audioCtx(); }catch(e){}
-    document.removeEventListener('touchstart',warm); document.removeEventListener('keydown',warm); document.removeEventListener('mousedown',warm); };
-  document.addEventListener('touchstart',warm,{once:true,passive:true});
-  document.addEventListener('keydown',warm,{once:true});
-  document.addEventListener('mousedown',warm,{once:true});
-})();
-// música del título: los navegadores bloquean audio sin gesto previo, así que
-// arranca en el primer toque/tecla/clic mientras la pantalla de título esté visible
-(function(){
-  let startTitleMusic=()=>{
-    let ts=document.getElementById('titlescreen');
-    if(ts && ts.style.display!=='none' && typeof updateMusicForState==='function'){
-      updateMusicForState('title');
+  let unlocked=false;
+  function afterResume(c){
+    if(unlocked) return;
+    unlocked=true;
+    removeAll();
+    // arrancar la música del título ahora que el audio está permitido
+    try{
+      let ts=document.getElementById('titlescreen');
+      if(ts && ts.style.display!=='none' && typeof updateMusicForState==='function'){
+        updateMusicForState('title');
+      }
+    }catch(e){}
+  }
+  function reallyUnlock(){
+    let c;
+    try{ c = audioCtx(); }catch(e){ return; }
+    if(!c) return;
+    // Android: un buffer de 1 muestra DENTRO del gesto despierta el hardware.
+    try{
+      let b=c.createBuffer(1,1,c.sampleRate||22050);
+      let s=c.createBufferSource();
+      s.buffer=b; s.connect(c.destination);
+      if(s.start) s.start(0); else if(s.noteOn) s.noteOn(0);
+    }catch(e){}
+    // reanudar y ESPERAR a que la promesa se resuelva (o actuar ya si corría)
+    if(c.state==='running'){ afterResume(c); return; }
+    try{
+      let p=c.resume();
+      if(p && p.then) p.then(()=>afterResume(c)).catch(()=>{});
+      else afterResume(c);   // navegadores viejos: resume() no devuelve promesa
+    }catch(e){}
+  }
+  function onGesture(){ if(!unlocked) reallyUnlock(); }
+  // expuesta para que los botones de audio (SON/MÚS) y el inicio de partida
+  // fuercen el desbloqueo dentro de su propio gesto.
+  window.forceAudioUnlock=function(){ reallyUnlock(); };
+  function removeAll(){
+    ['pointerdown','touchstart','touchend','mousedown','keydown','click'].forEach(ev=>{
+      document.removeEventListener(ev,onGesture,true);
+    });
+  }
+  document.addEventListener('pointerdown',onGesture,true);
+  document.addEventListener('touchstart',onGesture,true);
+  document.addEventListener('touchend',onGesture,true);
+  document.addEventListener('mousedown',onGesture,true);
+  document.addEventListener('keydown',onGesture,true);
+  document.addEventListener('click',onGesture,true);
+  // En móvil, cambiar de app/pestaña SUSPENDE el contexto y no vuelve solo.
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='visible'){
+      try{ let c=(window.VSynth&&VSynth.ctx)?VSynth.ctx():null;
+        if(c && c.state==='suspended') c.resume(); }catch(e){}
     }
-    document.removeEventListener('touchstart',startTitleMusic); document.removeEventListener('keydown',startTitleMusic); document.removeEventListener('mousedown',startTitleMusic);
-  };
-  document.addEventListener('touchstart',startTitleMusic,{once:true,passive:true});
-  document.addEventListener('keydown',startTitleMusic,{once:true});
-  document.addEventListener('mousedown',startTitleMusic,{once:true});
+  });
 })();
 // toggle de sonido (persiste en G.settings)
 UI.toggleGuide=function(){
@@ -14965,6 +15062,7 @@ UI.toggleGuide=function(){
 // ═══ VOLUMEN DE EFECTOS (independiente de la música) ═══
 // ciclo: 100% → 75% → 50% → 25% → OFF → 100%
 UI.toggleSound=function(){
+  if(typeof window.forceAudioUnlock==='function') window.forceAudioUnlock();
   if(!G.settings) G.settings={};
   let cur = G.settings.sound===false ? 0 : (G.settings.volume!=null?G.settings.volume:1);
   let next = _cycleVol(cur);
@@ -14978,6 +15076,7 @@ UI.toggleSound=function(){
 // ═══ VOLUMEN DE MÚSICA (independiente de los efectos) ═══
 // ahora es un NIVELADOR, igual que el de efectos: 100% → 75% → 50% → 25% → OFF → 100%
 UI.toggleMusic=function(){
+  if(typeof window.forceAudioUnlock==='function') window.forceAudioUnlock();
   if(!G.settings) G.settings={};
   let cur = G.settings.music===false ? 0 : (G.settings.musicVolume!=null?G.settings.musicVolume:0.7);
   // el nivel por defecto (0.7) se trata como el escalón "75%" al ciclar por primera vez
@@ -16403,6 +16502,8 @@ Game.ccName=function(v){ CC.name=v;
 // ---------- START GAME ----------
 Game.startNewGame=function(){
   if(CC.name.trim().length===0)return;
+  // este es un gesto directo del usuario: momento ideal para desbloquear el audio
+  if(typeof window.forceAudioUnlock==='function') window.forceAudioUnlock();
   CC.active=false;   // la creación terminó: cerrar modales ya no restaura el menú
   closeModal();
   var _easyPick = !!CC.easy;
@@ -17693,8 +17794,8 @@ function renderMinimap(){
   // Escala adaptada al espacio real: en móvil la franja es ancha pero baja,
   // así que se comprime más en vertical que en horizontal para que se LEA.
   const movil = (typeof isMobileLayout==='function') ? isMobileLayout() : (window.innerWidth<=700);
-  const MAXW = movil ? 46 : 52;
-  const MAXH = movil ? 16 : 26;
+  const MAXW = movil ? 34 : 52;
+  const MAXH = movil ? 18 : 26;
   const sx=Math.max(1, Math.ceil(W/MAXW));
   const sy=Math.max(1, Math.ceil(H/MAXH));
   const px=G.player.x, py=G.player.y;
