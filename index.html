@@ -906,6 +906,15 @@ body.noscan::before{display:none}
 <div id="tooltip"></div>
 
 <script>
+/* Manejador de errores global silencioso: evita que una excepción imprevista en
+   un dispositivo concreto detenga el resto del juego. (La consola de depuración
+   en pantalla se retiró tras resolver el problema de audio.) */
+(function(){
+  window.addEventListener('error', function(){ /* no-op: no interrumpir el juego */ });
+  window.addEventListener('unhandledrejection', function(){ /* no-op */ });
+})();
+</script>
+<script>
 /* ===== data.js ===== */
 // ============================================================
 //  AMSALOR — DATA.JS
@@ -14428,12 +14437,37 @@ function freqOf(n){
 }
 let _ctx=null;
 function ctx(){
-  if(!_ctx){ try{_ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){_ctx=null;} }
+  if(!_ctx){
+    try{
+      var AC=(window.AudioContext||window.webkitAudioContext);
+      if(!AC){  _ctx=null; return null; }
+      _ctx=new AC();
+    }catch(e){ _ctx=null;  }
+  }
   // Los navegadores crean el contexto en estado 'suspended' hasta que hay un
   // gesto del usuario. Reanudarlo aquí (es idempotente) asegura que, en cuanto
   // haya interacción, el audio empiece a sonar de verdad.
-  if(_ctx && _ctx.state==='suspended'){ try{ _ctx.resume(); }catch(e){} }
+  if(_ctx && _ctx.state==='suspended'){
+    try{ var p=_ctx.resume();  }catch(e){  }
+  }
   return _ctx;
+}
+// RECREACIÓN del contexto cuando su reloj está CONGELADO (bug de WebView Android:
+// state='running' pero currentTime no avanza → nada suena). Cierra el contexto
+// muerto y crea uno nuevo. Debe llamarse dentro de un gesto del usuario.
+function recreateCtx(){
+  var old=_ctx;
+  // detener y limpiar el estado ligado al contexto viejo (cadenas, master…)
+  try{ if(S.loopWatch){clearInterval(S.loopWatch); S.loopWatch=null;} }catch(e){}
+  try{ if(S.timer){clearTimeout(S.timer); S.timer=null;} }catch(e){}
+  S.master=null; S.chains=null; S.song=null; S.provider=null; S.playing=false; S._pendingPlay=null;
+  S.genId++;   // invalida cualquier callback pendiente del contexto viejo
+  try{ if(old && old.close) old.close(); }catch(e){}
+  _ctx=null; _noiseBuf=null;
+  var nc=ctx();   // crea uno nuevo
+  // avisar al exterior para que resetee _currentSong y vuelva a arrancar la música
+  try{ if(typeof window.__onAudioCtxRecreated==='function') window.__onAudioCtxRecreated(); }catch(e){}
+  return nc;
 }
 let _noiseBuf=null;
 function noiseBuf(c){
@@ -14450,7 +14484,12 @@ function reverbIR(c,sec){
 }
 const _distCache={};
 function distCurve(amt){
-  amt=+amt||0; const k=amt.toFixed(2); if(_distCache[k])return _distCache[k];
+  amt=+amt||0;
+  // Sin distorsión → curva null: el WaveShaper deja pasar la señal SIN tocarla.
+  // (Con oversample 2x, procesar toda la música por el shaper era un posible
+  // punto de fallo/silencio en Android antiguo. Si no hay distorsión, no procesa.)
+  if(amt<=0) return null;
+  const k=amt.toFixed(2); if(_distCache[k])return _distCache[k];
   const n=1024,cv=new Float32Array(n),g=amt*40+1;
   for(let i=0;i<n;i++){const x=i*2/n-1; cv[i]=Math.tanh(g*x)/Math.tanh(g);}
   _distCache[k]=cv; return cv;
@@ -14481,9 +14520,71 @@ function _merge(base,over){
   return out;
 }
 function fillInst(i){ return _merge(DEF_INST,i||{}); }
+// Bandera del modo de audio SIMPLE (salta la cadena de efectos). La declaramos
+// aquí, antes de las funciones que la usan.
+var _simpleMode=false;
+// AUTODETECCIÓN de la cadena de audio: en algunos dispositivos (WebView de
+// Android antiguo, p. ej. el A12) la cadena completa de efectos produce SILENCIO
+// aunque no dé ningún error y el reloj avance. Para detectarlo sin depender del
+// oído, tocamos una nota INAUDIBLE (volumen mínimo) por la cadena completa en el
+// contexto EN VIVO y la medimos con un AnalyserNode. Si el análisis muestra que
+// no sale señal de la cadena completa (el caso del A12), activamos el modo simple.
+// Se prueba el audio REAL del dispositivo, no una simulación offline (que en
+// algunos WebView da un resultado distinto al de la reproducción en vivo).
+function selfTestChain(cb){
+  var c;
+  try{ c=ctx(); }catch(e){ cb(null); return; }
+  if(!c || c.state!=='running' || !c.createAnalyser){ cb(null); return; }
+  try{
+    // analizador conectado como sumidero de medición (NO al destino: inaudible)
+    var an=c.createAnalyser(); an.fftSize=1024;
+    // tocar una nota por la cadena COMPLETA, dirigida SOLO al analizador
+    var master=c.createGain(); master.gain.value=1; master.connect(an);
+    var trk={inst:{wave:'triangle',vol:1,fx:{reverb:{on:true,size:1.2,mix:0.3},delay:{on:true,time:0.12,fb:0.3,mix:0.25},chorus:{on:true,rate:0.6,depth:0.004,mix:0.35},eq:{low:2,mid:1,high:2},dist:0}},volume:1};
+    var saved=_simpleMode; _simpleMode=false;   // forzar cadena completa
+    var ch=buildChain(c, trk, master);
+    var I=fillInst(trk.inst);
+    playNote(c, ch, I, 'A4', c.currentTime+0.01, 0.3, 1.0);
+    _simpleMode=saved;
+    // muestrear el analizador varias veces durante ~250ms y quedarnos con el pico
+    var buf=new Uint8Array(an.frequencyBinCount);
+    var peak=0, samples=0;
+    var iv=setInterval(function(){
+      samples++;
+      try{
+        an.getByteTimeDomainData(buf);
+        for(var i=0;i<buf.length;i++){ var a=Math.abs(buf[i]-128); if(a>peak)peak=a; }
+      }catch(e){}
+      if(samples>=6){
+        clearInterval(iv);
+        // peak va de 0 (silencio) a ~128 (señal máxima). Umbral bajo: >2 = hay señal.
+        var norm=peak/128;
+        try{ master.disconnect(); an.disconnect(); }catch(e){}
+        cb(norm);
+      }
+    }, 45);
+  }catch(e){  cb(null); }
+}
+function buildChainSimple(c,trk,dest){
+  var inG=c.createGain(), vol=c.createGain(), gate=c.createGain();
+  inG.connect(vol); vol.connect(gate); gate.connect(dest);
+  var I=fillInst(trk.inst);
+  inG.gain.value=(I.vol!=null?I.vol:1);
+  vol.gain.value=(trk.volume!=null?trk.volume:0.5);
+  gate.gain.value=1;
+  // stubs para que setChain/playNote no rompan al tocar nodos de efectos
+  return {inG:inG, vol:vol, gate:gate, _minimal:true,
+    shaper:{}, eqL:{gain:{}}, eqM:{gain:{}}, eqH:{gain:{}},
+    flt:{frequency:{},Q:{},type:''}, fLfo:{frequency:{}}, fLfoG:{gain:{}},
+    chDelay:{delayTime:{}}, chLfo:{frequency:{}}, chLfoG:{gain:{}}, chWet:{gain:{}},
+    dly:{delayTime:{}}, dFb:{gain:{}}, dWet:{gain:{}}, conv:{}, rWet:{gain:{}},
+    pan:null, lastFreq:null};
+}
 function buildChain(c,trk,dest){
+  if(_simpleMode) return buildChainSimple(c,trk,dest);
+  try{
   const inG=c.createGain();
-  const shaper=c.createWaveShaper(); shaper.oversample='2x';
+  const shaper=c.createWaveShaper(); shaper.oversample='none';
   const eqL=c.createBiquadFilter(); eqL.type='lowshelf';  eqL.frequency.value=200;
   const eqM=c.createBiquadFilter(); eqM.type='peaking';   eqM.frequency.value=1100; eqM.Q.value=0.9;
   const eqH=c.createBiquadFilter(); eqH.type='highshelf'; eqH.frequency.value=4200;
@@ -14506,8 +14607,30 @@ function buildChain(c,trk,dest){
   const ch={inG,shaper,eqL,eqM,eqH,flt,fLfo,fLfoG,chDelay,chLfo,chLfoG,chWet,dly,dFb,dWet,conv,rWet,pan,vol,gate,lastFreq:null};
   setChain(c,ch,trk);
   return ch;
+  }catch(err){
+    // Si algún nodo de la cadena completa falla (p. ej. en Android antiguo),
+    // caemos a una CADENA MÍNIMA: solo ganancia → destino. La música sonará sin
+    // efectos, pero SONARÁ. Mejor eso que silencio total.
+    var inG2=c.createGain(); var vol2=c.createGain(); var gate2=c.createGain();
+    inG2.connect(vol2); vol2.connect(gate2); gate2.connect(dest);
+    var chMin={inG:inG2, vol:vol2, gate:gate2,
+      // stubs para que setChain/playNote no rompan
+      shaper:{}, eqL:{gain:{}}, eqM:{gain:{}}, eqH:{gain:{}},
+      flt:{frequency:{},Q:{},type:''}, fLfo:{frequency:{}}, fLfoG:{gain:{}},
+      chDelay:{delayTime:{}}, chLfo:{frequency:{}}, chLfoG:{gain:{}}, chWet:{gain:{}},
+      dly:{delayTime:{}}, dFb:{gain:{}}, dWet:{gain:{}}, conv:{}, rWet:{gain:{}},
+      pan:null, lastFreq:null, _minimal:true};
+    vol2.gain.value=(trk.volume!=null?trk.volume:0.5);
+    gate2.gain.value=1;
+    inG2.gain.value=(trk.inst&&trk.inst.vol!=null?trk.inst.vol:1);
+    return chMin;
+  }
 }
 function setChain(c,ch,trk){
+  if(ch._minimal){ // cadena mínima: solo volumen, sin efectos que configurar
+    try{ ch.vol.gain.value=(trk.volume!=null?trk.volume:0.5); ch.inG.gain.value=(fillInst(trk.inst).vol); }catch(e){}
+    return;
+  }
   const I=fillInst(trk.inst), fx=I.fx;
   ch.inG.gain.value=I.vol;
   ch.shaper.curve=distCurve(fx.dist);
@@ -14530,6 +14653,10 @@ function setChain(c,ch,trk){
 }
 function playNote(c,ch,I,name,when,durSec,vel){
   const f0=freqOf(name); if(f0==null&&I.wave!=='noise')return;
+  // BLINDAJE: si 'when' quedó en el pasado (dispositivo lento que tardó en
+  // construir la cadena), lo reajustamos al presente + un pelín. Sin esto,
+  // setValueAtTime(0.0001, when) con when pasado deja la nota MUDA.
+  if(when < c.currentTime+0.005){ when = c.currentTime+0.02; }
   vel=(vel==null?1:Math.max(0.01,Math.min(1,vel)));
   const e=I.adsr, a=Math.min(Math.max(0.002,e.a),durSec*0.5), rel=Math.max(0.02,e.r);
   const sus=Math.max(0.0001,Math.min(1,e.s));
@@ -14596,7 +14723,7 @@ function applyAuto(c,ch,trk,abs,spb,totalBeats){
   }
 }
 const S={genId:0,timer:null,loopWatch:null,master:null,chains:null,song:null,provider:null,opts:null,
-         playing:false,passStart:0,passDur:0,layersOff:{},masterVol:0.8};
+         playing:false,passStart:0,passDur:0,layersOff:{},masterVol:0.8,_pendingPlay:null};
 function gateTarget(song,trk){
   const anySolo=(song.tracks||[]).some(t=>t.solo);
   if(trk.mute)return 0;
@@ -14621,20 +14748,46 @@ function stop(fade){
 }
 function play(songOrFn,opts){
   opts=opts||{};
-  const c=ctx(); if(!c)return null;
-  if(c.state==='suspended'){try{c.resume();}catch(e){}}
+  const c=ctx(); if(!c){  return null; }
+  // Si el contexto AÚN está dormido, programar aquí dejaría la música muda (su
+  // reloj no avanza). En vez de eso, esperamos a que resume() despierte el
+  // contexto y RE-LLAMAMOS a play() con los mismos argumentos. Guardamos la
+  // intención por si llegan varias llamadas: solo la última vale.
+  if(c.state==='suspended'){
+    S._pendingPlay={song:songOrFn, opts:opts};
+    try{
+      var pr=c.resume();
+      if(pr && pr.then){
+        pr.then(function(){
+          var pend=S._pendingPlay; S._pendingPlay=null;
+          if(pend && c.state==='running'){ play(pend.song, pend.opts); }
+        }).catch(function(){ S._pendingPlay=null; });
+      }
+      // fallback: si en 400ms ya despertó pero la promesa no disparó, reintentar
+      setTimeout(function(){
+        var pend=S._pendingPlay;
+        if(pend && c.state==='running'){ S._pendingPlay=null;  play(pend.song, pend.opts); }
+      }, 400);
+    }catch(e){ S._pendingPlay=null; }
+    return null;   // se reintentará cuando el contexto despierte
+  }
   stop(0.2);
   const my=++S.genId;
   S.playing=true; S.opts=opts;
   S.provider=(typeof songOrFn==='function')?songOrFn:null;
   let song=S.provider?S.provider():songOrFn; S.song=song;
-  const master=c.createGain(); master.gain.value=0.0001;
+  const master=c.createGain();
   master.connect(opts.dest||c.destination);
   S.master=master;
   const mv=(opts.volume!=null?opts.volume:(song.volume!=null?song.volume:0.8));
   S.masterVol=mv;
-  master.gain.setValueAtTime(0.0001,c.currentTime);
-  master.gain.linearRampToValueAtTime(mv,c.currentTime+0.25);
+  // VOLUMEN DIRECTO (sin rampa). El beep de diagnóstico que SÍ se oye pone la
+  // ganancia directa; la rampa linearRampToValueAtTime desde 0.0001 podía dejar
+  // el master casi mudo en algunos dispositivos si el reloj avanzaba entre la
+  // programación de la rampa y las notas. Ponemos el valor directo y una rampa
+  // MUY corta solo para evitar el clic inicial.
+  master.gain.value=mv;
+  try{ master.gain.setValueAtTime(Math.max(0.0008,mv*0.5),c.currentTime); master.gain.linearRampToValueAtTime(mv,c.currentTime+0.03); }catch(e){ master.gain.value=mv; }
   S.layersOff={};
   if(opts.layers){
     const on={}; opts.layers.forEach(l=>on[l]=1);
@@ -14646,6 +14799,7 @@ function play(songOrFn,opts){
     return ch;
   });
   const loop=(opts.loop!=null?opts.loop:(song.loop!==false));
+  var _firstNote=true;
   function schedulePass(abs){
     const sg=(S.provider?S.provider():song); S.song=sg;
     const spb=60/(sg.bpm||120);
@@ -14664,12 +14818,18 @@ function play(songOrFn,opts){
         const name=n[0], s=+n[1]||0, d=Math.max(0.05,+n[2]||1), v=(n[3]!=null?+n[3]:1);
         if(!name||s>=totalBeats)continue;
         playNote(c,ch,I,name,abs+s*spb,Math.min(d,totalBeats-s)*spb,v);
+        if(_firstNote){ _firstNote=false;  }
       }
     });
     if(opts.onPass)opts.onPass(abs,dur,sg);
     return dur;
   }
-  let passStart=c.currentTime+0.06;
+  // MARGEN DE ARRANQUE. Construir las cadenas de audio puede tardar cientos de
+  // ms en dispositivos lentos (en el A12 ~360ms). Si programamos las notas con
+  // el currentTime de ANTES de construirlas, 'when' queda en el PASADO y
+  // setValueAtTime(0.0001, when) deja la nota en silencio. Por eso tomamos el
+  // currentTime AHORA (ya construidas las cadenas) y añadimos un colchón amplio.
+  let passStart=c.currentTime+0.15;
   let totalDur=schedulePass(passStart);
   if(loop){
     // ── SCHEDULER DE LOOK-AHEAD (robusto contra el throttling del navegador) ──
@@ -14725,7 +14885,11 @@ function setMasterVolume(v){
   if(S.master&&_ctx){try{S.master.gain.linearRampToValueAtTime(v,_ctx.currentTime+0.08);}catch(e){}}
 }
 return {play,stop,setLayers,refreshGates,setMasterVolume,
-        freqOf,NOTE_FREQ,buildChain,setChain,playNote,fillInst,ctx,state:S};
+        freqOf,NOTE_FREQ,buildChain,setChain,playNote,fillInst,ctx,recreateCtx,
+        setSimpleMode:function(v){ _simpleMode=!!v;  },
+        isSimpleMode:function(){ return _simpleMode; },
+        selfTestChain:selfTestChain,
+        state:S};
 })();
 
 // ═══ LAS 8 CANCIONES (Forja Sonora) ═══
@@ -14759,6 +14923,23 @@ window.audioCtx=audioCtx;
 let _musicTension=false;   // histéresis: entra con vida <25%, sale con >40%
 let _currentSong=null;     // el objeto-canción activo (para no reiniciar en vano)
 let _currentLayers=null;
+
+// Cuando VSynth recrea el AudioContext (porque el anterior nació congelado en
+// ciertos WebView de Android), hay que OLVIDAR la canción actual y volver a
+// arrancarla sobre el contexto nuevo — si no, _currentSong===song y el router
+// cree que ya suena y no hace nada, dejándolo mudo.
+window.__onAudioCtxRecreated=function(){
+  _currentSong=null; _currentLayers=null;
+  try{
+    var estado='title';
+    var ts=document.getElementById('titlescreen');
+    if(ts && ts.style.display==='none'){
+      // ya estamos jugando: elegir según contexto
+      estado = (G&&G.isHub)?'santuario':((G&&G.inCombat)?((G.combat&&G.combat.isBoss)?'boss':'combat'):'explore');
+    }
+    if(typeof updateMusicForState==='function') updateMusicForState(estado);
+  }catch(e){  }
+};
 
 // mapa bioma → canción de exploración
 function _biomeSong(){
@@ -14802,7 +14983,8 @@ function _playSong(song, layers, vol){
 let _currentBaseVol=0.8;   // volumen base de la canción activa (sin el ajuste del jugador)
 
 function updateMusicForState(state){
-  if(G && G.settings && G.settings.music===false){ if(window.VSynth) VSynth.stop(0.3); _currentSong=null; return; }
+  if(G && G.settings && G.settings.music===false){  if(window.VSynth) VSynth.stop(0.3); _currentSong=null; return; }
+  if(typeof VSynth==='undefined' || !window.VSynth){  return; }
   switch(state){
     case 'title':
       _playSong(CANCION_TITULO, ['base','tension'], 0.7);
@@ -14897,9 +15079,9 @@ window.updateMadnessDrone=updateMadnessDrone;
 // así que no acumulan nodos ni traban el hilo por más que se disparen seguido.
 function _sfxCtx(){
   let c=(window.VSynth&&VSynth.ctx)?VSynth.ctx():null;
-  // En móvil el contexto puede estar 'suspended' o 'interrupted' (Android/iOS).
-  // Reanudarlo aquí, en el mismo hilo del efecto, maximiza que suene.
-  if(c && c.state!=='running'){ try{ c.resume(); }catch(e){} }
+  // Solo reanudar si NO está corriendo. Llamar resume() sobre un contexto ya
+  // activo es innecesario y en algunos dispositivos podía interferir.
+  if(c && c.state==='suspended'){ try{ c.resume(); }catch(e){} }
   return c;
 }
 // El volumen de los EFECTOS es INDEPENDIENTE del de la música: usa el ajuste
@@ -14913,7 +15095,7 @@ function _sfxMaster(){
   return 1;
 }
 function tone(freq, dur, wave, vol, toFreq){
-  let c=_sfxCtx(); if(!c) return;
+  let c=_sfxCtx(); if(!c){  return; }
   try{
     if(c.state==='suspended'){ try{c.resume();}catch(e){} }
     let o=c.createOscillator(), g=c.createGain();
@@ -14927,7 +15109,7 @@ function tone(freq, dur, wave, vol, toFreq){
     g.gain.exponentialRampToValueAtTime(0.0001, now+Math.max(0.02,dur));
     o.connect(g); g.connect(c.destination);
     o.start(now); o.stop(now+dur+0.05);
-  }catch(e){}
+  }catch(e){  }
 }
 let _sfxNoiseBuf=null;
 function _sfxNoise(c){
@@ -14938,7 +15120,7 @@ function _sfxNoise(c){
   return _sfxNoiseBuf;
 }
 function noise(dur, vol, filterFreq){
-  let c=_sfxCtx(); if(!c) return;
+  let c=_sfxCtx(); if(!c){  return; }
   try{
     if(c.state==='suspended'){ try{c.resume();}catch(e){} }
     let src=c.createBufferSource(); src.buffer=_sfxNoise(c);
@@ -14951,13 +15133,14 @@ function noise(dur, vol, filterFreq){
     g.gain.exponentialRampToValueAtTime(0.0001, now+Math.max(0.02,dur));
     src.connect(bp); bp.connect(g); g.connect(c.destination);
     src.start(now); src.stop(now+dur+0.05);
-  }catch(e){}
+  }catch(e){  }
 }
 window.tone=tone; window.noise=noise;
 
 function sfx(kind){
   // respetar el ajuste del jugador (por defecto activado)
-  if(G && G.settings && G.settings.sound===false) return;
+  if(G && G.settings && G.settings.sound===false){  return; }
+  
   switch(kind){
     case 'hit':     noise(0.08, 0.10, 1800); tone(160, 0.06, 'square', 0.06, 90); break;
     case 'crit':    noise(0.12, 0.16, 2400); tone(220, 0.10, 'sawtooth', 0.10, 110); break;
@@ -14988,66 +15171,168 @@ function playFootstep(){
 }
 window.playFootstep=playFootstep;
 window.sfx=sfx;
-// DESBLOQUEO DEL AUDIO — crítico en Android/Chrome.
-// El AudioContext nace 'suspended' y solo se reanuda dentro de un gesto real.
-// CLAVE: resume() es ASÍNCRONO. Justo después de llamarlo, ctx.state sigue
-// siendo 'suspended' hasta que su promesa se resuelve. Por eso hay que actuar
-// en el .then() de la promesa, NO comprobar el estado en la misma línea.
+// DESBLOQUEO DEL AUDIO.
+// Los navegadores bloquean el sonido hasta que hay un gesto del usuario y el
+// AudioContext nace 'suspended'. Este enfoque es el que funcionaba en TODOS los
+// teléfonos: simple, sin buffers de silencio (que reventaban en Android antiguo
+// como el A12) y SIN depender de que la promesa de resume() se resuelva (en
+// WebViews viejos esa promesa a veces nunca se cumple).
+//
+// Idea: en CADA gesto intentamos crear+reanudar el contexto. No esperamos a
+// ninguna promesa: si el contexto ya está 'running' arrancamos la música; si no,
+// el propio resume() dentro del gesto lo despierta y el siguiente gesto (o el
+// propio arranque de partida) ya lo encuentra activo. Los efectos y la música
+// reaniman el contexto por su cuenta cada vez que suenan (ver _sfxCtx / play).
 (function(){
-  let unlocked=false;
-  function afterResume(c){
-    if(unlocked) return;
-    unlocked=true;
-    removeAll();
-    // arrancar la música del título ahora que el audio está permitido
+  let musicStarted=false;
+  var _clockOK=false;   // se pone true cuando se confirma que el reloj del contexto avanza
+  var _pokeCount=0;
+  // Arranca la música del título SOLO si el contexto está activo. Devuelve true
+  // si lo consiguió. Si el contexto aún duerme, no marca nada: se reintentará.
+  function tryStartMusic(c){
+    if(musicStarted) return true;
+    if(!c || c.state!=='running') return false;   // ← CLAVE: no programar sobre reloj congelado
+    // No arrancar hasta CONFIRMAR que el reloj avanza (evita ensuciar con un
+    // contexto congelado que luego hay que recrear). checkFrozenThenStart pone
+    // _clockOK=true en cuanto lo confirma, y entonces llama aquí.
+    if(!_clockOK) return false;
     try{
       let ts=document.getElementById('titlescreen');
       if(ts && ts.style.display!=='none' && typeof updateMusicForState==='function'){
         updateMusicForState('title');
+        musicStarted=true;
+        return true;
       }
-    }catch(e){}
+    }catch(e){  }
+    return false;
   }
-  function reallyUnlock(){
+  function pokeAudio(){
+    _pokeCount++;
     let c;
-    try{ c = audioCtx(); }catch(e){ return; }
-    if(!c) return;
-    // Android: un buffer de 1 muestra DENTRO del gesto despierta el hardware.
-    try{
-      let b=c.createBuffer(1,1,c.sampleRate||22050);
-      let s=c.createBufferSource();
-      s.buffer=b; s.connect(c.destination);
-      if(s.start) s.start(0); else if(s.noteOn) s.noteOn(0);
-    }catch(e){}
-    // reanudar y ESPERAR a que la promesa se resuelva (o actuar ya si corría)
-    if(c.state==='running'){ afterResume(c); return; }
-    try{
-      let p=c.resume();
-      if(p && p.then) p.then(()=>afterResume(c)).catch(()=>{});
-      else afterResume(c);   // navegadores viejos: resume() no devuelve promesa
-    }catch(e){}
+    try{ c = audioCtx(); }catch(e){  return; }
+    if(!c){  return; }
+    // Reanudar dentro del gesto. En dispositivos lentos (p. ej. A12) el contexto
+    // tarda en pasar a 'running': resume() devuelve una promesa que se resuelve
+    // cuando por fin despierta. Enganchamos ahí el arranque de la música, porque
+    // programarla mientras sigue 'suspended' la deja muda (reloj de audio parado).
+    if(c.state!=='running'){
+      try{
+        var p=c.resume();
+        if(p && p.then){ p.then(function(){  checkFrozenThenStart(c); }).catch(function(){}); }
+      }catch(e){}
+    }
+    // intentar también ya, por si el contexto ya estaba activo
+    checkFrozenThenStart(c);
   }
-  function onGesture(){ if(!unlocked) reallyUnlock(); }
-  // expuesta para que los botones de audio (SON/MÚS) y el inicio de partida
-  // fuercen el desbloqueo dentro de su propio gesto.
-  window.forceAudioUnlock=function(){ reallyUnlock(); };
-  function removeAll(){
-    ['pointerdown','touchstart','touchend','mousedown','keydown','click'].forEach(ev=>{
-      document.removeEventListener(ev,onGesture,true);
-    });
+  // Detecta el RELOJ CONGELADO (state='running' pero currentTime no avanza — bug
+  // de WebView Android donde el motor de audio no arranca) y, si lo encuentra,
+  // RECREA el contexto dentro del gesto. Solo tras confirmar que avanza, arranca música.
+  var _frozenChecks=0, _recreated=false;
+  function checkFrozenThenStart(c){
+    if(!c || c.state!=='running'){ return; }
+    if(_clockOK){ tryStartMusic(c); return; }
+    var t0=c.currentTime;
+    setTimeout(function(){
+      var cc=(window.VSynth&&VSynth.ctx)?VSynth.ctx():null;
+      if(!cc) return;
+      if(cc===c && cc.currentTime<=t0){
+        // el reloj NO avanzó: contexto congelado
+        _frozenChecks++;
+        if(!_recreated && _frozenChecks>=1 && window.VSynth && VSynth.recreateCtx){
+          _recreated=true;   // recrear una sola vez
+          var nc=VSynth.recreateCtx();
+          var afterNew=function(){
+            // verificar que el NUEVO contexto sí avanza antes de dar por bueno
+            var n0=nc.currentTime;
+            setTimeout(function(){
+              if(nc.currentTime>n0){
+                _clockOK=true;
+                musicStarted=false; runSelfTestThenStart(nc);
+              } else {
+              }
+            }, 150);
+          };
+          if(nc && nc.state!=='running'){ try{ var p=nc.resume(); if(p&&p.then)p.then(afterNew); else afterNew(); }catch(e){} }
+          else if(nc){ afterNew(); }
+        }
+      } else {
+        // el reloj SÍ avanza → probar la cadena completa antes de arrancar
+        _clockOK=true;
+        runSelfTestThenStart(cc);
+      }
+    }, 150);
+    // NO arrancamos música aquí todavía: primero hay que confirmar (arriba, tras
+    // 150ms) que el reloj de este contexto AVANZA. Arrancar antes, sobre un
+    // contexto que resultará congelado, dejaba residuos que enmudecían todo
+    // aunque luego se recreara. Se arranca solo cuando se confirma que avanza.
   }
-  document.addEventListener('pointerdown',onGesture,true);
-  document.addEventListener('touchstart',onGesture,true);
-  document.addEventListener('touchend',onGesture,true);
-  document.addEventListener('mousedown',onGesture,true);
-  document.addEventListener('keydown',onGesture,true);
-  document.addEventListener('click',onGesture,true);
-  // En móvil, cambiar de app/pestaña SUSPENDE el contexto y no vuelve solo.
-  document.addEventListener('visibilitychange',()=>{
+  // Decide el modo de audio y arranca la música. En dispositivos TÁCTILES/móviles
+  // usamos el modo simple por defecto: la cadena larga de efectos (reverb,
+  // chorus, convolver…) enmudece el audio en algunos WebView de Android (p. ej.
+  // el A12) y, aunque en otros móviles suene, la ruta simple garantiza sonido en
+  // TODOS. En escritorio, donde la cadena completa funciona de forma fiable, se
+  // mantienen todos los efectos. Además, una prueba en vivo puede forzar el modo
+  // simple si detecta que la cadena completa no produce señal.
+  var _selfTested=false;
+  function runSelfTestThenStart(c){
+    if(_selfTested){ tryStartMusic(c); return; }
+    _selfTested=true;
+    // 1) móvil → modo simple directo (garantía de sonido)
+    var esMovil=false;
+    try{ esMovil = (typeof isMobileLayout==='function' && isMobileLayout())
+                || ('ontouchstart' in window)
+                || (navigator.maxTouchPoints>0); }catch(e){}
+    if(esMovil && window.VSynth && VSynth.setSimpleMode){
+      VSynth.setSimpleMode(true);
+      tryStartMusic(c);
+      return;
+    }
+    // 2) escritorio → probar la cadena completa en vivo; si sale muda, simple
+    if(!window.VSynth || !VSynth.selfTestChain){ tryStartMusic(c); return; }
+    try{
+      VSynth.selfTestChain(function(peak){
+        if(peak!=null && peak<0.02 && VSynth.setSimpleMode){
+          VSynth.setSimpleMode(true);
+        }
+        tryStartMusic(c);
+      });
+    }catch(e){ tryStartMusic(c); }
+  }
+  // expuesta para que los botones de audio y el inicio de partida fuercen el
+  // desbloqueo dentro de su propio gesto.
+  window.forceAudioUnlock=pokeAudio;
+  document.addEventListener('touchstart',pokeAudio,{passive:true});
+  document.addEventListener('touchend',pokeAudio,{passive:true});
+  document.addEventListener('mousedown',pokeAudio);
+  document.addEventListener('keydown',pokeAudio);
+  document.addEventListener('click',pokeAudio);
+  // al volver de otra app el contexto queda suspendido: reanimarlo (y, si la
+  // música aún no arrancó por seguir dormido el contexto, arrancarla al volver)
+  document.addEventListener('visibilitychange',function(){
     if(document.visibilityState==='visible'){
       try{ let c=(window.VSynth&&VSynth.ctx)?VSynth.ctx():null;
-        if(c && c.state==='suspended') c.resume(); }catch(e){}
+        if(c && c.state!=='running'){ var p=c.resume(); if(p&&p.then)p.then(function(){tryStartMusic(c);}).catch(function(){}); }
+        else tryStartMusic(c); }catch(e){}
     }
   });
+  // VIGILANTE (red de seguridad para dispositivos lentos como el A12):
+  // en algunos móviles resume() tarda segundos en pasar a 'running' y su promesa
+  // puede dispararse tarde o no dispararse. Revisamos varias veces por segundo
+  // durante los primeros ~15 s: en cuanto el contexto esté activo y la música no
+  // haya arrancado, la arrancamos. Se detiene solo al lograrlo o al agotar el tiempo.
+  var _watchN=0;
+  var _watch=setInterval(function(){
+    _watchN++;
+    if(musicStarted || _watchN>90){ clearInterval(_watch); return; }  // 90×180ms ≈ 16 s
+    try{
+      var c=(window.VSynth&&VSynth.ctx)?VSynth.ctx():null;
+      if(c && c.state==='running'){
+        // checkFrozenThenStart verifica que el reloj avanza (o recrea) y solo
+        // entonces arranca. Si ya está confirmado, arranca directo.
+        checkFrozenThenStart(c);
+      }
+    }catch(e){}
+  }, 180);
 })();
 // toggle de sonido (persiste en G.settings)
 UI.toggleGuide=function(){
