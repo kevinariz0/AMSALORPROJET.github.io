@@ -200,7 +200,7 @@ body.noscan::before{display:none}
    altura de 21px fija hacía que las filas se solaparan (muros montándose sobre
    los pasillos). Con line-height:1 y height:auto, la fila mide justo lo que la
    fuente, sea cual sea el zoom. */
-#viewport .vp-row{display:block;height:auto;line-height:1;white-space:nowrap}
+#viewport .vp-row{display:block;height:auto;line-height:1.25;white-space:nowrap}
 #viewport{line-height:1}
 /* ═══ COMBATE EN 3 ZONAS: eje fijo arriba · lista con scroll · TÚ fijo abajo ═══
    Antes todo era una sola columna y tu bloque quedaba al final, fuera de la
@@ -235,12 +235,23 @@ body.noscan::before{display:none}
   background:#0b0b09;border:1px solid var(--line-bright);overflow:hidden;vertical-align:middle;
 }
 .cb-res .cb-resbar i{position:absolute;left:0;top:0;bottom:0;transition:width .25s}
-/* las filas de las zonas de combate no usan la rejilla de 1ch del mapa */
-.cb-list .vp-row span, .cb-self .vp-row span, .cb-axis span{width:auto}
-.cb-list .vp-row, .cb-self .vp-row{white-space:normal}
+/* las filas de las zonas de combate NO usan la rejilla de 1ch del mapa: sus
+   spans (nombre, barras de vida, ATB, recursos) deben fluir con su ancho y alto
+   naturales. Sin esto, la rejilla de celda del mapa los aplastaba a 1ch y
+   recortaba los datos de vida de los enemigos. El prefijo #viewport da la
+   especificidad necesaria para ganar a la regla del mapa. */
+#viewport .cb-list .vp-row span:not(.hpbar-wrap):not(.hpbar-fill), #viewport .cb-self span:not(.hpbar-wrap):not(.hpbar-fill), #viewport .cb-axis span{
+  width:auto;height:auto;line-height:normal;overflow:visible;display:inline-block;vertical-align:baseline
+}
+/* la barra de vida conserva su ancho propio, solo se libera su altura */
+#viewport .cb-list .hpbar-wrap, #viewport .cb-self .hpbar-wrap{height:9px;overflow:visible}
+#viewport .cb-list .vp-row, #viewport .cb-self .vp-row{white-space:normal}
 /* FIX Android: glifos Unicode de ancho variable rompían la alineación
-   de columnas ("mapa mal generado"). Cada celda mide exactamente 1ch. */
-#viewport .vp-row span{display:inline-block;width:1ch;height:1em;line-height:1;overflow:hidden;text-align:center;vertical-align:top}
+   de columnas ("mapa mal generado"). Cada celda mide exactamente 1ch de ancho.
+   La altura es 1.25em (algo más que la fuente) para que glifos altos como ▓, ♦
+   o los sprites de criaturas quepan ENTEROS sin recortarse; line-height igual a
+   la altura los centra verticalmente y evita que las filas se superpongan. */
+#viewport .vp-row span{display:inline-block;width:1ch;height:1.25em;line-height:1.25em;overflow:visible;text-align:center;vertical-align:top}
 
 /* log / message panel */
 /* ===== FEEDBACK VISUAL DE COMBATE ===== */
@@ -270,6 +281,12 @@ body.noscan::before{display:none}
   25%{opacity:1;transform:translate(-50%,-140%) scale(1.15)}
   70%{opacity:1;transform:translate(-50%,-170%) scale(1)}
   100%{opacity:0;transform:translate(-50%,-210%) scale(.95)}
+}
+/* banner de acción de combate: entra desde arriba con un pequeño rebote */
+@keyframes cbBannerIn{
+  0%{opacity:0;transform:translateX(-50%) translateY(-10px) scale(.94)}
+  60%{opacity:1;transform:translateX(-50%) translateY(2px) scale(1.02)}
+  100%{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
 }
 /* sacudida del viewport en golpes fuertes */
 @keyframes fxShake{
@@ -738,9 +755,27 @@ body.noscan::before{display:none}
   .modal-foot button,.modal-foot .btn{flex:1;min-width:120px;padding:11px;font-size:14px}
 
   /* acciones de combate grandes y cómodas para el pulgar */
-  .cmd{padding:11px 15px;font-size:14px;margin:2px}
-  #cmdbar{padding:8px 6px;gap:4px;display:flex;flex-wrap:wrap;justify-content:center;
-    overflow-y:auto;max-height:26vh;align-content:flex-start;flex:0 0 auto}
+  /* ═══ BOTONES DE COMBATE EN MÓVIL: grilla ordenada y táctil ═══
+     Antes los botones se envolvían de forma irregular (unos anchos, otros
+     estrechos) y quedaban desalineados. Ahora usan una grilla de 2 columnas
+     con celdas del mismo tamaño: más fáciles de leer y de tocar con el dedo. */
+  #cmdbar{
+    padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+    display:grid;grid-template-columns:1fr 1fr;gap:6px;
+    justify-content:stretch;align-content:start;
+    overflow-y:auto;max-height:30vh;flex:0 0 auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .cmd{
+    padding:12px 10px;font-size:14px;margin:0;
+    min-height:46px;display:flex;align-items:center;justify-content:center;
+    text-align:center;white-space:normal;line-height:1.2;
+    border-radius:5px;box-sizing:border-box;
+  }
+  /* elementos que deben ocupar la fila completa: etiquetas, cancelar, mensajes */
+  #cmdbar > span.c-amber, #cmdbar > span.c-dim, #cmdbar > .cmd.wide,
+  #cmdbar > .cmd.danger{ grid-column:1 / -1; }
+  #cmdbar > span.blink{ grid-column:1 / -1; text-align:center; }
   /* barras de recursos del combate: más altas y legibles */
   .hpbar-wrap{width:120px;height:11px}
   .st-chip{font-size:12px;padding:1px 4px}
@@ -8851,6 +8886,16 @@ function startATB(){
 // El ritmo base es el mismo para todos; contra enemigos triviales se agiliza
 // un poco, pero SIN volver frenético el combate (antes los débiles iban al
 // doble de velocidad y el turno llegaba cada 0,4 s).
+// Duración de la pausa de lectura tras cada acción enemiga (ms). Da tiempo a ver
+// el banner, el daño y la animación. Un poco más corta contra enemigos triviales.
+function combatPauseMs(){
+  let c=G.combat; if(!c)return 850;
+  let enemies=c.combatants.filter(x=>x.isEnemy && x.ref);
+  if(!enemies.length)return 850;
+  let maxTier=Math.max(...enemies.map(x=>x.ref.tier||1));
+  if(maxTier<=2) return 750;   // débiles: algo más ágil
+  return 900;                  // normales/élites: pausa plena para leer
+}
 function atbInterval(){
   let c=G.combat; if(!c)return 110;
   let enemies=c.combatants.filter(x=>x.isEnemy && x.ref);
@@ -8911,6 +8956,8 @@ function atbTick(){
           cb.atb=0; renderCombat(); return;
         }
         c.playerReady=true; c.mode='menu'; c.submenu=null; c.round++;
+        // aviso claro de que es TU turno (una sola vez al activarse)
+        if(typeof combatBanner==='function') combatBanner('▸ Tu turno', 'info');
         // CANALIZACIÓN PASIVA: cada turno tuyo, el cuerpo absorbe captorixyl
         if(typeof classUsesMagic==='function' && classUsesMagic()){
           let gain=Math.max(2, Math.round(G.player.krosMax*0.05));
@@ -8935,6 +8982,11 @@ function atbTick(){
         if(G.player.hp<=0){ endCombat('death'); return; }
         if(!c.combatants.some(x=>x.isEnemy&&aliveCombatant(x))){ endCombat('victory'); return; }
         renderCombat();
+        // PAUSA DE LECTURA: tras actuar un enemigo/aliado, congelamos el ATB un
+        // momento para que dé tiempo a ver el banner, el número de daño y la
+        // animación antes de que pase el siguiente. Sin esto, todo se atropella.
+        c.busy=true;
+        setTimeout(function(){ if(G.combat){ G.combat.busy=false; } }, combatPauseMs());
         return; // uno por tick, para que se lea
       }
     }
@@ -10166,6 +10218,7 @@ function endCombat(result){
   // limpiar timers
   if(G._combatTimer){ clearTimeout(G._combatTimer); G._combatTimer=null; }
   if(G._atbTimer){ clearInterval(G._atbTimer); G._atbTimer=null; }
+  if(typeof clearCombatBanner==='function') clearCombatBanner();
   // móvil: restaurar el zoom del mapa al salir del combate
   setTimeout(()=>{ if(typeof fitViewport==='function') fitViewport(); }, 50);
   let c=G.combat;
@@ -14414,6 +14467,53 @@ function spellParticles(cbid, colVar){
   }
 }
 
+// ═══ BANNER DE ACCIÓN DE COMBATE ═══
+// Muestra en GRANDE, sobre el viewport, qué acaba de pasar y cuánto daño, para
+// que el jugador no dependa de leer la crónica a toda velocidad. El texto se
+// queda un momento y se desvanece. Es la vía principal de comunicación en combate.
+let _cbBanner=null, _cbBannerTimer=null;
+function combatBanner(text, kind){
+  // kind: 'player-hit' | 'enemy-hit' | 'crit' | 'miss' | 'heal' | 'info' | 'block'
+  let host=document.getElementById('viewport-panel')||document.getElementById('viewport');
+  if(!host)return;
+  if(!_cbBanner || !_cbBanner.isConnected){
+    _cbBanner=document.createElement('div');
+    _cbBanner.id='cb-banner';
+    // el host necesita position para anclar el banner
+    try{ let cs=getComputedStyle(host); if(cs.position==='static') host.style.position='relative'; }catch(e){}
+    host.appendChild(_cbBanner);
+  }
+  let palette={
+    'player-hit':{c:'--amber-glow',b:'rgba(255,180,60,0.14)'},
+    'crit':      {c:'--amber-glow',b:'rgba(255,210,90,0.22)'},
+    'enemy-hit': {c:'--red-bright', b:'rgba(210,70,70,0.16)'},
+    'miss':      {c:'--ink-dim',    b:'rgba(120,120,120,0.12)'},
+    'heal':      {c:'--green',      b:'rgba(90,200,90,0.14)'},
+    'block':     {c:'--cyan',       b:'rgba(90,190,220,0.14)'},
+    'info':      {c:'--ink-bright', b:'rgba(160,160,160,0.10)'}
+  };
+  let p=palette[kind]||palette.info;
+  let col=getCssVar(p.c);
+  _cbBanner.textContent=text;
+  _cbBanner.style.cssText=`position:absolute;left:50%;top:12px;transform:translateX(-50%);
+    z-index:60;pointer-events:none;max-width:92%;text-align:center;
+    color:${col};background:${p.b};border:1px solid ${col};
+    padding:7px 16px;border-radius:6px;font-weight:bold;
+    font-size:${kind==='crit'?'19px':'15px'};letter-spacing:${kind==='crit'?'2px':'0.5px'};
+    text-shadow:0 0 6px #000,0 0 3px #000;box-shadow:0 2px 14px rgba(0,0,0,0.5);
+    animation:cbBannerIn .18s ease-out`;
+  clearTimeout(_cbBannerTimer);
+  // el banner se queda visible un tiempo generoso y luego se desvanece
+  let hold = kind==='crit'?1500:kind==='info'?1100:1300;
+  _cbBannerTimer=setTimeout(()=>{
+    if(_cbBanner){ _cbBanner.style.transition='opacity .4s'; _cbBanner.style.opacity='0'; }
+  }, hold);
+}
+function clearCombatBanner(){
+  if(_cbBanner){ _cbBanner.remove(); _cbBanner=null; }
+  clearTimeout(_cbBannerTimer);
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  SONIDO SINTÉTICO (Web Audio API) — sin archivos, todo generado.
 //  Opcional: se activa/desactiva con G.settings.sound (por defecto ON).
@@ -15422,15 +15522,31 @@ window.combatFX={
     if(crit){ floatWord(cbid, '¡CRÍTICO!', '--amber-glow'); shakeViewport(true); }
     else if(dmg>=12){ shakeViewport(false); }
     haptic(crit?[0,30,20,30]:18); sfx(crit?'crit':'hit');
+    // BANNER: mensaje claro de quién golpeó a quién y cuánto (comunicación directa)
+    try{
+      let cm = G.combat && G.combat.combatants[cbid];
+      let nombre = cm ? cm.name : 'el objetivo';
+      if(isPlayerTarget){
+        combatBanner((crit?'¡CRÍTICO! ':'')+'Recibes '+dmg+' de daño', crit?'crit':'enemy-hit');
+      } else {
+        combatBanner((crit?'¡CRÍTICO! ':'')+'Golpeas a '+nombre+' por '+dmg, crit?'crit':'player-hit');
+      }
+    }catch(e){}
   },
-  heal(cbid, amt){ flashCombatant(cbid,'heal'); floatNumber(cbid,'✚ +'+amt,'heal','--green'); haptic(12); sfx('heal'); },
-  block(cbid){ floatWord(cbid,'✦ BLOQUEO','--cyan'); haptic(10); sfx('block'); },
-  miss(cbid){ floatWord(cbid,'¡FALLO!','--ink-dim'); sfx('miss'); },
-  dodge(cbid){ flashCombatant(cbid,'heal'); floatWord(cbid,'¡ESQUIVA!','--cyan'); haptic(14); sfx('dodge'); },
+  heal(cbid, amt){ flashCombatant(cbid,'heal'); floatNumber(cbid,'✚ +'+amt,'heal','--green'); haptic(12); sfx('heal');
+    try{ let cm=G.combat&&G.combat.combatants[cbid]; combatBanner((cm&&cm.isPlayer?'Recuperas':'Curación:')+' +'+amt+' vida','heal'); }catch(e){} },
+  block(cbid){ floatWord(cbid,'✦ BLOQUEO','--cyan'); haptic(10); sfx('block');
+    try{ combatBanner('Bloqueas el golpe','block'); }catch(e){} },
+  miss(cbid){ floatWord(cbid,'¡FALLO!','--ink-dim'); sfx('miss');
+    try{ let cm=G.combat&&G.combat.combatants[cbid]; combatBanner(cm&&cm.isPlayer?'El ataque enemigo falla':'Tu ataque falla','miss'); }catch(e){} },
+  dodge(cbid){ flashCombatant(cbid,'heal'); floatWord(cbid,'¡ESQUIVA!','--cyan'); haptic(14); sfx('dodge');
+    try{ let cm=G.combat&&G.combat.combatants[cbid]; combatBanner(cm&&cm.isPlayer?'¡Esquivas!':(cm?cm.name+' esquiva':'¡Esquiva!'),'block'); }catch(e){} },
   status(cbid, glyph){ floatNumber(cbid, glyph, 'hit'); },
   spell(cbid, colVar){ spellParticles(cbid, colVar); haptic(15); sfx('spell'); },
-  death(cbid){ deathAnim(cbid); },
-  word(cbid, text, col){ floatWord(cbid, text, col); }
+  death(cbid){ deathAnim(cbid);
+    try{ let cm=G.combat&&G.combat.combatants[cbid]; if(cm&&!cm.isPlayer) combatBanner('☠ '+cm.name+' cae derrotado','info'); }catch(e){} },
+  word(cbid, text, col){ floatWord(cbid, text, col); },
+  banner(text, kind){ try{ combatBanner(text, kind); }catch(e){} }
 };
 
 function statusIcons(ent){
@@ -15451,10 +15567,13 @@ function renderCombatActions(){
   if(typeof updateTouchUI==='function') updateTouchUI();   // asegura layout táctil en combate
   let c=G.combat;
   if(!c){ bar.innerHTML=''; return; }
-  // en móvil, garantizar que la barra de acciones sea visible durante el combate
+  // en móvil, garantizar que la barra de acciones sea visible durante el combate.
+  // El LAYOUT (grilla de 2 columnas) lo define el CSS; aquí solo aseguramos que
+  // esté visible, sin pisar display/flex-wrap (eso rompía la grilla).
   if(typeof isMobileLayout==='function' && isMobileLayout()){
-    bar.style.display='flex'; bar.style.flexWrap='wrap';
-    bar.style.justifyContent='center';
+    bar.style.removeProperty('display');
+    bar.style.removeProperty('flex-wrap');
+    bar.style.removeProperty('justify-content');
   }
   // bajo ATB: solo se actúa cuando tu barra está llena
   if(!c.playerReady||c.mode==='resolving'){
@@ -18178,16 +18297,19 @@ function updateTouchUI(){
   if(zb) zb.style.display=(G&&G.inCombat)?'none':'inline-block';
 
   if(G&&G.inCombat){
-    // en combate: ocultar dpad/exploración, MOSTRAR el menú de acciones (cmdbar)
+    // en combate: ocultar dpad/exploración, MOSTRAR el menú de acciones (cmdbar).
+    // El layout (grilla de 2 columnas) lo define el CSS; aquí solo mostramos la
+    // barra con display:grid y dejamos que el CSS haga el resto. No forzamos flex
+    // ni flex-wrap (eso rompía la grilla y desalineaba los botones).
     explore.style.display='none';
     mobilebar.style.display='none';
-    cmdbar.style.display='flex';
-    cmdbar.style.flexWrap='wrap';
-    cmdbar.style.gap='6px';
-    cmdbar.style.padding='10px 8px 14px';
+    cmdbar.style.display='grid';
+    cmdbar.style.removeProperty('flex-wrap');
+    cmdbar.style.removeProperty('justify-content');
+    cmdbar.style.removeProperty('gap');
+    cmdbar.style.removeProperty('padding');
     cmdbar.style.borderTop='1px solid var(--line-bright)';
     cmdbar.style.background='var(--bg2)';
-    cmdbar.style.justifyContent='center';
   } else {
     // exploración: mostrar dpad + barra de menús, ocultar cmdbar
     explore.style.display='flex';
