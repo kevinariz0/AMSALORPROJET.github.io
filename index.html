@@ -39,6 +39,66 @@
   --shadow:rgba(0,0,0,0.8);
 }
 
+/* ═══ PALETAS POR ZONA ═══════════════════════════════════════════════════
+   El juego es monocromo, pero jugamos con el contraste y el brillo para dar
+   personalidad a cada bioma. Se aplican como filtro al viewport (barato, por
+   GPU). La transición suaviza el cambio al entrar en una zona nueva. */
+#viewport{ transition:filter .8s ease; }
+#viewport.pal-cuevas_humedas{ filter:contrast(1.12) brightness(0.94); }  /* húmedo, algo oscuro */
+#viewport.pal-minas{      filter:contrast(1.28) brightness(0.9); }        /* mucho contraste, duro */
+#viewport.pal-ruinas{     filter:contrast(1.05) brightness(0.98); }       /* intermedio */
+#viewport.pal-cristales{  filter:contrast(1.15) brightness(1.1); }        /* luminoso, frío */
+#viewport.pal-bosque{     filter:contrast(0.82) brightness(1.05); }       /* grises suaves, difuso */
+#viewport.pal-volcanica{  filter:contrast(1.35) brightness(0.96); }       /* duro, ardiente */
+#viewport.pal-cementerio{ filter:contrast(1.3) brightness(0.7); }         /* casi negro, opresivo */
+#viewport.pal-colmena{    filter:contrast(1.2) brightness(0.88); }        /* denso, cargado */
+/* atenuación extra durante la aparición de un jefe */
+#viewport.boss-dim{ filter:contrast(1.4) brightness(0.5) !important; transition:filter 1.2s ease; }
+/* deformación de los caracteres del escenario durante la intro del jefe */
+@keyframes bossWarp{
+  0%{ transform:skewX(0) scaleY(1); filter:blur(0) }
+  25%{ transform:skewX(3deg) scaleY(1.04); filter:blur(0.6px) }
+  50%{ transform:skewX(-2deg) scaleY(0.97); filter:blur(0.3px) }
+  75%{ transform:skewX(2deg) scaleY(1.02); filter:blur(0.5px) }
+  100%{ transform:skewX(0) scaleY(1); filter:blur(0) }
+}
+#viewport.boss-warp{ animation:bossWarp 1.2s ease-in-out; }
+/* cartel de aparición de jefe */
+.boss-intro-overlay{
+  position:absolute; inset:0; z-index:80; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; pointer-events:none;
+  background:radial-gradient(ellipse at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.72) 75%);
+  animation:bossFadeIn 0.6s ease-out; transition:opacity .5s ease;
+}
+@keyframes bossFadeIn{ from{opacity:0} to{opacity:1} }
+.boss-intro-glyph{
+  font-family:monospace; font-size:56px; color:var(--red-bright); font-weight:bold;
+  text-shadow:0 0 18px rgba(220,60,60,0.6),0 0 8px #000;
+  animation:bossGlyphPulse 1.4s ease-in-out infinite;
+}
+@keyframes bossGlyphPulse{ 0%,100%{transform:scale(1);opacity:0.9} 50%{transform:scale(1.12);opacity:1} }
+.boss-intro-sub{
+  color:var(--ink-dim); letter-spacing:8px; font-size:13px; margin:8px 0 4px;
+  animation:bossFadeIn 1s ease-out 0.4s both;
+}
+.boss-intro-name{
+  font-family:monospace; font-size:24px; font-weight:bold; letter-spacing:4px;
+  color:var(--ink-bright); text-align:center; text-transform:uppercase;
+  text-shadow:0 0 12px rgba(255,255,255,0.35),0 0 4px #000; padding:0 12px;
+  max-width:94%; line-height:1.25;
+  /* el nombre aparece letra a letra con un revelado lento */
+  animation:bossNameReveal 1.8s ease-out 0.5s both;
+}
+@keyframes bossNameReveal{
+  0%{ opacity:0; letter-spacing:14px; transform:scale(0.94) }
+  60%{ opacity:1 }
+  100%{ opacity:1; letter-spacing:4px; transform:scale(1) }
+}
+@media (max-width:700px){
+  .boss-intro-glyph{ font-size:44px }
+  .boss-intro-name{ font-size:18px; letter-spacing:2px }
+}
+
 *{box-sizing:border-box;margin:0;padding:0}
 
 html,body{
@@ -59,19 +119,54 @@ html,body{
   font-variant-emoji:text;
 }
 
-/* CRT scanline / vignette overlay */
+/* ═══ EFECTO CRT (monitor de fósforo antiguo) ═══
+   Tres capas superpuestas: (1) scanlines horizontales marcadas, (2) máscara de
+   sombra vertical (los subpíxeles RGB de un tubo), (3) viñeta + curvatura de luz.
+   Más una animación sutil de parpadeo del haz. Se apaga con .noscan. */
 body::before{
   content:"";
   position:fixed;inset:0;
   pointer-events:none;
-  z-index:9999;
+  z-index:9998;
   background:
-    repeating-linear-gradient(0deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0) 4px),
-    radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,0.55) 100%);
-  mix-blend-mode:multiply;
-  opacity:0.5;
+    /* scanlines horizontales: la línea oscura entre cada barrido */
+    repeating-linear-gradient(0deg,
+      rgba(0,0,0,0) 0px,
+      rgba(0,0,0,0.32) 1px,
+      rgba(0,0,0,0.32) 2px,
+      rgba(0,0,0,0) 3px),
+    /* máscara de sombra: franjas verticales RGB del tubo */
+    repeating-linear-gradient(90deg,
+      rgba(255,0,0,0.06) 0px,
+      rgba(0,255,0,0.04) 1px,
+      rgba(0,0,255,0.06) 2px,
+      rgba(0,0,0,0) 3px);
+  background-size: 100% 3px, 3px 100%;
+  opacity:0.85;
+  animation: crtFlicker 6s infinite steps(1);
+}
+/* segunda capa: viñeta + resplandor central (curvatura del tubo) */
+body::after{
+  content:"";
+  position:fixed;inset:0;
+  pointer-events:none;
+  z-index:9997;
+  background:
+    radial-gradient(ellipse at center, rgba(30,25,20,0) 42%, rgba(0,0,0,0.5) 100%),
+    radial-gradient(ellipse at center, rgba(120,110,90,0.06) 0%, rgba(0,0,0,0) 60%);
+}
+@keyframes crtFlicker{
+  0%,100%{opacity:0.85}
+  48%{opacity:0.85}
+  49%{opacity:0.78}
+  50%{opacity:0.88}
+  51%{opacity:0.82}
+  92%{opacity:0.85}
+  93%{opacity:0.8}
+  94%{opacity:0.86}
 }
 body.noscan::before{display:none}
+body.noscan::after{display:none}
 
 #app{
   height:100vh;
@@ -119,9 +214,10 @@ body.noscan::before{display:none}
   min-height:0;
 }
 .panel-h{
-  background:linear-gradient(180deg,#161616,#0d0d0d);
+  background:linear-gradient(180deg,#1a1a1a,#0d0d0d);
   border-bottom:1px solid var(--line-bright);
-  padding:3px 10px;
+  border-left:3px solid var(--amber);
+  padding:4px 10px;
   font-size:12px;
   color:var(--amber);
   letter-spacing:2px;
@@ -134,7 +230,10 @@ body.noscan::before{display:none}
   white-space:nowrap;
   overflow:hidden;
 }
-.panel-h #vp-title{overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.panel-h #vp-title{overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;
+  font-size:14px;font-weight:bold;letter-spacing:2.5px;
+  color:var(--amber-glow);text-shadow:0 0 8px rgba(255,180,60,0.25)}
+.panel-h #vp-title::before{content:'◈ ';color:var(--amber);opacity:0.7;font-size:12px}
 .panel-h #vp-coords{flex-shrink:0}
 .panel-h .h-sub{color:var(--ink-dim);letter-spacing:1px}
 .panel-body{padding:8px 10px;overflow-y:auto;flex:1;min-height:0}
@@ -305,6 +404,13 @@ body.noscan::before{display:none}
   75%{transform:translate(-4px,-3px)}
   90%{transform:translate(4px,2px)}
 }
+@keyframes fxShakeSoft{
+  0%,100%{transform:translate(0,0)}
+  25%{transform:translate(-2px,1px)}
+  50%{transform:translate(2px,-1px)}
+  75%{transform:translate(-1px,1px)}
+}
+.fx-shake-soft{animation:fxShakeSoft .16s ease-in-out}
 .fx-shake{animation:fxShake .22s ease-in-out}
 .fx-shake-hard{animation:fxShakeHard .35s ease-in-out}
 /* parpadeo del combatiente al morir */
@@ -353,15 +459,18 @@ body.noscan::before{display:none}
 
 /* bars */
 .bar{
-  height:13px;border:1px solid var(--line-bright);background:#0a0a0a;
-  position:relative;font-size:10px;overflow:hidden;margin:2px 0;
+  height:15px;border:1px solid var(--line-bright);background:#0a0a0a;
+  position:relative;font-size:10px;overflow:hidden;margin:3px 0;border-radius:2px;
 }
 .bar .fill{height:100%;transition:width .2s}
-.bar .txt{position:absolute;inset:0;text-align:center;line-height:11px;color:var(--ink-bright);
-  text-shadow:0 0 2px #000,0 0 2px #000;font-size:10px;letter-spacing:1px}
-.bar.hp .fill{background:linear-gradient(90deg,#555,#ddd)}
-.bar.kros .fill{background:linear-gradient(90deg,#444,#bbb)}
-.bar.heat .fill{background:linear-gradient(90deg,#333,#999)}
+.bar .txt{position:absolute;inset:0;text-align:center;line-height:15px;color:var(--ink-bright);
+  text-shadow:0 0 2px #000,0 0 2px #000,0 0 3px #000;font-size:10px;letter-spacing:1px;font-weight:bold}
+/* VIDA: la barra más importante, más gruesa y con color vívido para que destaque */
+.bar.hp{height:19px;border-color:var(--red-bright);box-shadow:0 0 6px rgba(200,60,60,0.15)}
+.bar.hp .fill{background:linear-gradient(90deg,#7a1f1f,#e04a4a,#ff6a6a)}
+.bar.hp .txt{line-height:19px;font-size:11px;letter-spacing:1.5px}
+.bar.kros .fill{background:linear-gradient(90deg,#2a3a6a,#5a7ad0,#7a9aff)}
+.bar.heat .fill{background:linear-gradient(90deg,#5a3010,#c07030,#ff9040)}
 .bar.xp .fill{background:linear-gradient(90deg,#4a4a4a,#cfcfcf)}
 
 /* psi meter */
@@ -375,23 +484,34 @@ body.noscan::before{display:none}
 #cmdbar{
   border:1px solid var(--line-bright);
   background:var(--panel);
-  padding:6px 10px;
+  padding:10px 12px;
   margin-top:8px;
   flex-shrink:0;
   display:flex;
   flex-wrap:wrap;
-  gap:4px 8px;
+  gap:8px 10px;
   align-items:center;
   min-height:34px;
 }
 .cmd{
-  cursor:pointer;border:1px solid var(--line-bright);background:#121212;
-  padding:2px 9px;font-size:12px;color:var(--ink);user-select:none;
-  letter-spacing:1px;white-space:nowrap;
+  cursor:pointer;border:1px solid var(--line-bright);background:#161616;
+  padding:9px 16px;font-size:13px;color:var(--ink);user-select:none;
+  letter-spacing:1px;white-space:nowrap;border-radius:5px;
+  transition:background .12s,border-color .12s,transform .08s;
+  display:inline-flex;align-items:center;gap:2px;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;
 }
-.cmd:hover{background:#1f1f1f;color:var(--amber-glow);border-color:var(--amber)}
-.cmd .key{color:var(--amber);font-weight:bold}
+.cmd:hover{background:#242424;color:var(--amber-glow);border-color:var(--amber);transform:translateY(-1px)}
+.cmd:active{transform:translateY(0)}
+.cmd .key{
+  color:var(--amber);font-weight:bold;
+  display:inline-block;min-width:15px;height:16px;line-height:15px;text-align:center;
+  border:1px solid var(--amber);border-radius:3px;font-size:10px;padding:0 1px;
+  background:rgba(200,150,50,0.14);margin-right:1px;
+}
+.cmd:hover .key{background:rgba(200,150,50,0.25)}
 .cmd.danger:hover{color:var(--red-bright);border-color:var(--red)}
+.cmd.danger:hover .key{border-color:var(--red);color:var(--red-bright);background:rgba(200,50,50,0.15)}
 .cmd.disabled{opacity:0.35;cursor:default;pointer-events:none}
 
 /* Inventory / list rows */
@@ -404,6 +524,26 @@ body.noscan::before{display:none}
 .lrow .nm{color:var(--ink)}
 .lrow .nm .ic{display:inline-block;width:18px;text-align:center}
 .lrow .meta{color:var(--ink-dim);font-size:11px}
+
+/* ── FILAS DE OBJETO con descripción y etiquetas inline (sin hover) ── */
+.lrow-item{display:block;padding:8px 8px;margin-bottom:4px;border:1px solid var(--line);border-radius:5px;background:#0d0d0d}
+.lrow-item:hover{background:#151515;border-color:var(--line-bright)}
+.lrow-item.equipped{border-color:var(--green-dim);background:rgba(60,120,60,0.06)}
+.lrow-item .li-main{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.li-desc{font-size:11px;color:var(--ink-dim);line-height:1.35;margin-top:3px;font-style:italic}
+.li-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.fx-tag{font-size:10px;padding:2px 6px;border-radius:3px;border:1px solid var(--line-bright);
+  color:var(--ink);background:#161616;white-space:nowrap;letter-spacing:0.3px}
+.fx-tag.fx-heal{color:var(--green);border-color:var(--green-dim)}
+.fx-tag.fx-kro{color:var(--violet-bright);border-color:var(--violet)}
+.fx-tag.fx-sta{color:var(--green);border-color:var(--green-dim)}
+.fx-tag.fx-ham{color:var(--amber-glow);border-color:var(--amber)}
+.fx-tag.fx-sed{color:var(--cyan);border-color:var(--cyan)}
+.fx-tag.fx-dmg{color:var(--red-bright);border-color:var(--red)}
+.fx-tag.fx-def{color:var(--cyan);border-color:var(--cyan)}
+.fx-tag.fx-cure{color:var(--green);border-color:var(--green-dim)}
+.fx-tag.fx-loc{color:var(--violet-bright);border-color:var(--violet)}
+.fx-tag.fx-warn{color:var(--red-bright);border-color:var(--red);background:rgba(180,50,50,0.1)}
 /* ── Botones del ALMACÉN: zona táctil amplia para móvil ── */
 .stbtn{
   flex:0 0 auto;display:inline-block;white-space:nowrap;
@@ -442,10 +582,15 @@ body.noscan::before{display:none}
 /* Tabs */
 .tabs{display:flex;border-bottom:1px solid var(--line-bright);flex-shrink:0}
 .tab{padding:3px 12px;font-size:12px;cursor:pointer;color:var(--ink-dim);
-  letter-spacing:1px;border:1px solid transparent;border-bottom:none;user-select:none}
+  letter-spacing:1px;border:1px solid transparent;border-bottom:none;user-select:none;
+  transition:color .15s,background .15s,border-color .15s}
 .tab:hover{color:var(--ink)}
 .tab.active{color:var(--amber);background:var(--panel);border-color:var(--line-bright);
   border-bottom:1px solid var(--panel);margin-bottom:-1px}
+/* el contenido del panel entra con un fundido sutil al cambiar de pestaña */
+#info-body{animation:panelFade .2s ease-out}
+@keyframes panelFade{ from{opacity:0.35; transform:translateY(3px)} to{opacity:1; transform:translateY(0)} }
+@media (prefers-reduced-motion: reduce){ #info-body{animation:none} }
 
 /* Modal / overlay screens */
 #overlay{
@@ -457,7 +602,25 @@ body.noscan::before{display:none}
   justify-content:center;
   padding:20px;
 }
-#overlay.show{display:flex}
+/* TRANSICIÓN DE MENÚS: el overlay entra con un fundido y el modal con un leve
+   ascenso + escala. Da una sensación pulida en vez de un salto brusco. */
+#overlay.show{display:flex; animation:overlayFadeIn .22s ease-out}
+#overlay.show .modal{ animation:modalRise .26s cubic-bezier(0.16,1,0.3,1) }
+#overlay.closing{display:flex; animation:overlayFadeOut .18s ease-in forwards}
+#overlay.closing .modal{ animation:modalSink .18s ease-in forwards }
+@keyframes overlayFadeIn{ from{opacity:0} to{opacity:1} }
+@keyframes overlayFadeOut{ from{opacity:1} to{opacity:0} }
+@keyframes modalRise{
+  from{ opacity:0; transform:translateY(14px) scale(0.97) }
+  to{   opacity:1; transform:translateY(0) scale(1) }
+}
+@keyframes modalSink{
+  from{ opacity:1; transform:translateY(0) scale(1) }
+  to{   opacity:0; transform:translateY(8px) scale(0.98) }
+}
+@media (prefers-reduced-motion: reduce){
+  #overlay.show, #overlay.show .modal, #overlay.closing, #overlay.closing .modal{ animation:none }
+}
 .modal{
   border:1px solid var(--amber);
   background:var(--bg2);
@@ -589,7 +752,7 @@ body.noscan::before{display:none}
   border:1px solid var(--line-bright);background:#111;color:var(--ink-bright);
   font-size:20px;display:flex;align-items:center;justify-content:center;
   user-select:none;-webkit-user-select:none;cursor:pointer;border-radius:4px;
-  touch-action:manipulation;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
 }
 .dbtn:active{background:#fff;color:#000}
 .dbtn.up{grid-column:2;grid-row:1}
@@ -619,6 +782,34 @@ body.noscan::before{display:none}
 }
 .mbtn:active,.mbtn.active{background:#fff;color:#000}
 
+/* ===== PANEL DE AJUSTES ===== */
+.set-wrap{display:flex;flex-direction:column;gap:2px;max-height:70vh;overflow-y:auto}
+.set-sec{font-size:11px;letter-spacing:2px;color:var(--amber);margin:12px 0 4px;
+  padding-bottom:3px;border-bottom:1px solid var(--line);text-transform:uppercase}
+.set-sec:first-child{margin-top:0}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:11px 10px;border:1px solid var(--line);border-radius:6px;cursor:pointer;
+  background:#0d0d0d;transition:background .15s,border-color .15s;user-select:none;
+  touch-action:manipulation}
+.set-row:active{background:#1a1a1a}
+.set-row:hover{border-color:var(--line-bright)}
+.set-info{flex:1;min-width:0}
+.set-label{font-size:13px;color:var(--ink-bright);font-weight:bold;margin-bottom:2px}
+.set-desc{font-size:11px;color:var(--ink-dim);line-height:1.3}
+.set-val{flex-shrink:0;font-size:12px;font-weight:bold;padding:5px 12px;border-radius:4px;
+  min-width:56px;text-align:center;border:1px solid}
+.set-val.on{color:var(--amber-glow);border-color:var(--amber);background:rgba(200,150,50,0.08)}
+.set-val.off{color:var(--ink-dim);border-color:var(--line);background:#0a0a0a}
+
+/* MÁQUINA DE ESCRIBIR: cursor parpadeante mientras el diálogo se revela */
+.dlg-type.typing::after{
+  content:'▋';
+  color:var(--amber-glow);
+  margin-left:1px;
+  animation:dlgCaret 0.6s steps(1) infinite;
+}
+@keyframes dlgCaret{ 0%,50%{opacity:1} 51%,100%{opacity:0} }
+
 /* ============ RESPONSIVE: layout de escritorio (ancho) ============ */
 /* Por defecto (escritorio) ya se muestran ambas columnas. */
 
@@ -644,7 +835,7 @@ body.noscan::before{display:none}
   #touchControlsExplore{padding-bottom:calc(8px + env(safe-area-inset-bottom))}
   #cmdbar{padding-bottom:calc(env(safe-area-inset-bottom))}
   #mobilebar{padding-bottom:env(safe-area-inset-bottom)}
-  body::before{opacity:0.25} /* scanlines más suaves en móvil */
+  body::before{opacity:0.6;animation:none} /* CRT visible pero sin parpadeo en móvil (ahorra batería) */
   /* ===== COMODIDAD DE APP NATIVA (táctil) ===== */
   *{
     -webkit-tap-highlight-color:transparent;   /* sin flash azul al tocar */
@@ -763,7 +954,7 @@ body.noscan::before{display:none}
     padding:8px 8px calc(8px + env(safe-area-inset-bottom));
     display:grid;grid-template-columns:1fr 1fr;gap:6px;
     justify-content:stretch;align-content:start;
-    overflow-y:auto;max-height:30vh;flex:0 0 auto;
+    overflow-y:auto;max-height:38vh;flex:0 0 auto;
     -webkit-overflow-scrolling:touch;
   }
   .cmd{
@@ -855,10 +1046,7 @@ body.noscan::before{display:none}
     <span class="t-right">
       <span id="depth-ind" class="c-dim">Profundidad —</span>
       <span id="cycle-ind" class="c-dim">—</span>
-      <span class="t-btn" onclick="UI.toggleScan()">▦ CRT</span>
-      <span class="t-btn" id="sound-btn" onclick="UI.toggleSound()">♪ SON</span>
-      <span class="t-btn" id="music-btn" onclick="UI.toggleMusic()" title="Música de fondo (independiente de los efectos)">♫ MÚS</span>
-      <span class="t-btn" id="guide-btn" onclick="UI.toggleGuide()" title="Pistas contextuales la primera vez que ocurre algo">◈ GUÍA</span>
+      <span class="t-btn" onclick="UI.openSettings()" title="Ajustes de gráficos, sonido y táctil" style="border-color:var(--amber)">⚙ AJUSTES</span>
       <span class="t-btn" onclick="Game.openJournal()">◈ DIARIO</span>
       <span class="t-btn" onclick="Game.openHelp()">? AYUDA</span>
       <span class="t-btn" onclick="Game.openGlossary()" title="Glosario de términos del mundo">✎ GLOSARIO</span>
@@ -908,11 +1096,13 @@ body.noscan::before{display:none}
       <span class="mbtn" onclick="UI.openMobilePanel('status')">☰ Personaje</span>
       <span class="mbtn" onclick="UI.openMobilePanel('inv')">▣ Inventario</span>
       <span class="mbtn" id="mb-abilities" onclick="UI.openMobilePanel('spells')">✦ Habilidades</span>
+      <span class="mbtn" id="mb-tree" onclick="UI.openMobilePanel('tree')">⊹ Árbol</span>
       <span class="mbtn" onclick="UI.openMobilePanel('equip')">⌂ Equipo</span>
       <span class="mbtn" onclick="UI.openMobilePanel('craft')">⚒ Crafteo</span>
       <span class="mbtn" onclick="UI.openMobilePanel('lore')">☉ Bestiario</span>
       <span class="mbtn" onclick="Game.openGlossary()">? Glosario</span>
       <span class="mbtn" onclick="Game.openMapLegend()">⌗ Leyenda</span>
+      <span class="mbtn" onclick="UI.openSettings()">⚙ Ajustes</span>
     </div>
   </div>
 
@@ -1972,7 +2162,21 @@ DATA.skills = {
   disparo_aturdidor:{id:"disparo_aturdidor", needsBow:true, name:"Disparo Aturdidor", icon:"✦", color:"--amber",
     desc:"Golpeas un nervio: el enemigo pierde su próximo turno.", cost:4, costType:"stamina",
     type:"attack", dmgMult:1.2, effect:{stun:1}, target:"enemy"},
+
 };
+
+// Devuelve la lista de IDs de habilidades que el personaje conoce (las que eligió
+// en la creación y las que aprendió después). Solo las suyas: nada predeterminado.
+function availableSkills(p){
+  p = p || (G&&G.player);
+  let out = [];
+  if(p && Array.isArray(p.skills)){
+    for(let id of p.skills){ if(!out.includes(id)) out.push(id); }
+  }
+  // solo IDs que existan en el catálogo
+  return out.filter(id=>DATA.skills[id]);
+}
+window.availableSkills=availableSkills;
 
 // ---------- TIENDA INICIAL ----------
 // El jugador recibe puntos (esquirlas) para comprar su kit de partida.
@@ -4385,6 +4589,43 @@ function genRooms(depth){
   if(others[_spIdx] && rchance(0.18+_veilBonus)){ others[_spIdx].type='portal'; _spIdx++; }   // portal
   if(others[_spIdx] && rchance(0.20)){ others[_spIdx].type='puzzle'; _spIdx++; }            // acertijo de botones
 
+  // ═══ CÁMARA DEL VACÍO ═══════════════════════════════════════════════════
+  // De vez en cuando, una sala GRANDE queda deliberadamente vacía: sin adorno,
+  // sin enemigos, sin objetos… salvo UN único elemento al fondo (una estatua, un
+  // cristal solitario, una vela, un cadáver antiguo). La escala y el silencio la
+  // vuelven memorable. No siempre aparece: su rareza es parte del efecto.
+  {
+    // candidatas: salas amplias todavía sin rol, lejos de la entrada
+    let voidCands = rooms.filter(r=>r.type==='normal'
+      && (r.shape==='big'||r.shape==='cavern')
+      && r.cells && r.cells.length>=48);
+    if(voidCands.length && rchance(0.28)){
+      // elegir la más grande de las candidatas
+      voidCands.sort((a,b)=>b.cells.length-a.cells.length);
+      let vc=voidCands[0];
+      vc.type='void_chamber';
+      // el elemento solitario: una celda de suelo cerca de un extremo (el "fondo"),
+      // no en el centro exacto, para que se descubra al avanzar por la sala.
+      let far=null, fd=-1;
+      for(let [x,y] of vc.cells){
+        // distancia al centro: buscamos algo alejado (un rincón/fondo)
+        let dd=Math.abs(x-vc.cx)+Math.abs(y-vc.cy);
+        if(dd>fd){ fd=dd; far=[x,y]; }
+      }
+      // repertorio de elementos evocadores (todos son features ya soportados o inertes)
+      let motifs=[
+        {glyph:'⚱', col:'--ink-bright', name:'una urna solitaria'},
+        {glyph:'†',  col:'--ink-dim',    name:'una lápida sin nombre'},
+        {glyph:'♦', col:'--blue',        name:'un cristal solitario que late despacio'},
+        {glyph:'≀',  col:'--amber-glow',  name:'una vela consumiéndose'},
+        {glyph:'ᛝ', col:'--ink-dim',     name:'un montículo de huesos'},
+        {glyph:'✦', col:'--violet',       name:'una esquirla de ψ suspendida'}
+      ];
+      let mo=motifs[Math.floor(G.rng()*motifs.length)];
+      vc._voidMotif = { x:(far?far[0]:vc.cx), y:(far?far[1]:vc.cy), glyph:mo.glyph, col:mo.col, name:mo.name };
+    }
+  }
+
   // puertas: donde un pasillo toca el borde de una sala (biomas con puertas)
   let doors=[];
   if(biome.doors){
@@ -4481,8 +4722,62 @@ function genRooms(depth){
     if(secret) ({floors,grid}=buildGrid());
   }
 
+  // ── DECORACIÓN DE FONDO (personalidad por bioma) ────────────────────────
+  // Props visuales que NO bloquean el paso: columnas, ruinas, raíces, charcos…
+  // Se guardan aparte (map.deco) y se pintan bajo entidades/objetos. Dan carácter
+  // a cada habitación sin tocar el gameplay. Deterministas por semilla del RNG.
+  let deco={};
+  (function decorate(){
+    // paletas de props por bioma. Cada entrada: [glifo, colorVar, peso]
+    const THEMES={
+      cuevas_humedas:[['❞','--ink-dim',3],['‰','--cyan',2],['∴','--ink-dim',3],['⌇','--cyan',1]],
+      minas:         [['╪','--ink-dim',3],['⌗','--ink',2],['¤','--amber',1],['▪','--ink-dim',3]],
+      bosque:        [['♧','--green-dim',3],['⁂','--green-dim',2],['❦','--green',1],['‡','--ink-dim',2]],
+      cristales:     [['◈','--blue',2],['⋄','--blue',3],['✧','--cyan',1],['∴','--violet',2]],
+      ruinas:        [['╫','--ink-bright',3],['╬','--ink',2],['⊞','--ink-dim',2],['†','--ink-dim',2]],
+      volcanica:     [['▴','--red',2],['⁘','--ink-dim',3],['∴','--amber',1],['·','--red',2]],
+      cementerio:    [['†','--ink-dim',3],['╬','--violet',2],['✝','--ink-dim',1],['∵','--violet',2]],
+      colmena:       [['⬡','--amber',2],['⌗','--ink-dim',3],['∴','--amber',1],['·','--line',3]]
+    };
+    // tema por bioma, con un respaldo genérico (columnas/escombros)
+    let theme = THEMES[biome.id] || [['▪','--ink-dim',3],['∴','--ink-dim',2],['╪','--ink',1]];
+    // expandir por peso para elegir con probabilidad
+    let bag=[]; for(let [g,c,w] of theme){ for(let i=0;i<w;i++) bag.push([g,c]); }
+    // densidad: pocas piezas por habitación, para que respire
+    for(let r of rooms){
+      if(r.type==='entrance') continue;           // la entrada queda limpia
+      if(r.type==='void_chamber') continue;        // el vacío se respeta: sin adorno
+      let area=(r.cells?r.cells.length:r.w*r.h);
+      let count=Math.min(6, Math.max(1, Math.floor(area*0.05)));
+      // COLUMNAS: algunas salas grandes tienen columnas simétricas
+      let bigRoom = area>=42 && rchance(0.5);
+      if(bigRoom && r.cells){
+        // dos columnas a los lados del centro
+        for(let off of [-2,2]){
+          let cx=r.cx+off, cy=r.cy;
+          if(tiles[cy] && tiles[cy][cx]===TILE.FLOOR && !corridor[cx+','+cy]){
+            deco[cx+','+cy]={ch:'╢',col:'--ink-bright'};
+          }
+        }
+      }
+      let placed=0, tries=0;
+      while(placed<count && tries<count*4){
+        tries++;
+        let cell = r.cells ? r.cells[rint(0,r.cells.length-1)] : [r.x+rint(0,r.w-1), r.y+rint(0,r.h-1)];
+        let [x,y]=cell;
+        let key=x+','+y;
+        if(!tiles[y]||tiles[y][x]!==TILE.FLOOR) continue;   // solo suelo
+        if(corridor[key]||deco[key]) continue;               // no en pasillos ni repetido
+        if(x===r.cx&&y===r.cy) continue;                     // deja libre el centro
+        let [g,c]=bag[rint(0,bag.length-1)];
+        deco[key]={ch:g,col:c};
+        placed++;
+      }
+    }
+  })();
+
   return {grid, tiles, floors, w, h, rooms, corridor, biome:biome.id, fog, sizeMult,
-          doors, secret, branchRewards, genEvents:genEventsApplied};
+          doors, secret, branchRewards, genEvents:genEventsApplied, deco};
 }
 
 // ---------- SANTUARIO// ---------- SANTUARIO (cada 5 pisos): cuarto seguro ----------
@@ -6054,7 +6349,7 @@ function populateLevel(depth){
     }
     return null;
   }
-  let spawnRooms=rooms.filter(r=>r.type!=='entrance');
+  let spawnRooms=rooms.filter(r=>r.type!=='entrance' && r.type!=='void_chamber');
   if(spawnRooms.length){
     for(let i=0;i<baseCount;i++){
       let r=spawnRooms[Math.floor(G.rng()*spawnRooms.length)];
@@ -6287,7 +6582,21 @@ function populateLevel(depth){
     }
   }
 
-  // ---- cofres extra y altar aleatorio (mapas sin salas) ----
+  // ---- CÁMARA DEL VACÍO: su único elemento solitario ----
+  // La sala ya quedó libre de adorno y enemigos; aquí colocamos la pieza central
+  // (estatua/urna/cristal…) que le da sentido al silencio. Es puramente evocadora.
+  for(let r of rooms){
+    if(r.type==='void_chamber' && r._voidMotif){
+      let vm=r._voidMotif;
+      // evitar solaparse con las escaleras u otra feature ya puesta
+      let occupied = G.features.some(f=>f.x===vm.x&&f.y===vm.y) ||
+                     (G.map.tiles[vm.y] && (G.map.tiles[vm.y][vm.x]===TILE.STAIRS_DOWN||G.map.tiles[vm.y][vm.x]===TILE.STAIRS_UP));
+      if(!occupied){
+        G.features.push({x:vm.x, y:vm.y, type:'void_relic', glyph:vm.glyph, col:vm.col, name:vm.name, examined:false});
+      }
+    }
+  }
+
   if(!rooms.length){
     let chestCount=rint(1,2)+Math.floor(depth/4);
     for(let i=0;i<chestCount;i++){
@@ -7260,12 +7569,38 @@ function getCssVar(name){
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-function tileGlyph(t){
+// hash determinista por posición: mismo (x,y) → siempre el mismo valor 0..n-1.
+// Sirve para variar el aspecto de suelos SIN que parpadeen entre frames.
+function _posHash(x,y,n){
+  let h=(x*73856093)^(y*19349663);
+  h=(h^(h>>>13))>>>0;
+  return h%n;
+}
+function tileGlyph(t, x, y){
   switch(t){
     case TILE.WALL: return {ch:'▒', col:'--ink'};
     case TILE.WALL_HARD: return {ch:'▓', col:'--ink-bright'};
-    case TILE.FLOOR: return {ch:'·', col:'--ink-dim'};
-    case TILE.WATER: return {ch:'≈', col:'--cyan'};
+    case TILE.FLOOR: {
+      // el suelo ya no es un '·' uniforme: motas repartidas dan textura.
+      // La variación es fija por casilla (no parpadea) y sutil.
+      if(x!==undefined){
+        let v=_posHash(x,y,16);
+        if(v===0) return {ch:',', col:'--ink-dim'};
+        if(v===1) return {ch:'˙', col:'--ink-dim'};
+        if(v===2) return {ch:'`', col:'--line'};
+        if(v===3) return {ch:'·', col:'--line'};
+      }
+      return {ch:'·', col:'--ink-dim'};
+    }
+    case TILE.WATER: {
+      // agua que ondula: alterna entre dos símbolos según el frame y la posición,
+      // de modo que no todas las celdas ondulan a la vez (parece corriente).
+      if(typeof AMBIENT_ANIM!=='undefined' && AMBIENT_ANIM && x!==undefined){
+        let ph=(_ambientFrame + _posHash(x,y,3))%3;
+        return {ch: ph===0?'≈':(ph===1?'~':'≋'), col:'--cyan'};
+      }
+      return {ch:'≈', col:'--cyan'};
+    }
     case TILE.CRYSTAL: return {ch:'◊', col:'--blue'};
     case TILE.FILAMENT: return {ch:'¦', col:'--violet'};
     case TILE.MUSHROOM: return {ch:'♠', col:'--green-dim'};
@@ -7273,7 +7608,14 @@ function tileGlyph(t){
     case TILE.STAIRS_UP: return {ch:'<', col:'--amber'};
     case TILE.RUBBLE: return {ch:',', col:'--ink-dim'};
     case TILE.MUD: return {ch:'~', col:'--ink-dim'};
-    case TILE.FIRE: return {ch:'*', col:'--red-bright'};
+    case TILE.FIRE: {
+      // fuego que titila entre varios símbolos
+      if(typeof AMBIENT_ANIM!=='undefined' && AMBIENT_ANIM){
+        let ph=(_ambientFrame + (x!==undefined?_posHash(x,y,4):0))%4;
+        return {ch:['*','✦','✳','+'][ph], col: ph<2?'--red-bright':'--amber-glow'};
+      }
+      return {ch:'*', col:'--red-bright'};
+    }
     case TILE.SPIKES: return {ch:'^', col:'--ink'};
     case TILE.POISON: return {ch:'≈', col:'--green'};
     case TILE.WEB: return {ch:'×', col:'--ink-dim'};
@@ -7289,6 +7631,25 @@ function tileGlyph(t){
 // ── RENDIMIENTO: dirty flag + agrupación por frame ──
 // renderMap() solo MARCA sucio; el repintado real (renderMapNow) corre una
 // vez por frame aunque lo llamen 5 veces seguidas. En móvil esto ahorra mucho.
+// ── OPCIONES VISUALES (activables; el jugador puede apagarlas si prefiere) ──
+let LIGHT_ENABLED = true;    // iluminación por radio en cuevas/incursiones
+let AMBIENT_ANIM = true;     // animación de agua, antorchas, cenizas
+window.LIGHT_ENABLED=LIGHT_ENABLED;
+// frame de animación ambiental: avanza lentamente y hace que el mapa se repinte
+// para que agua, fuego y antorchas alternen sus símbolos. Barato: un tick lento.
+let _ambientFrame=0, _ambientTimer=null;
+function startAmbientAnim(){
+  if(_ambientTimer) return;
+  _ambientTimer=setInterval(function(){
+    if(!AMBIENT_ANIM || !G || !G.map || G.inCombat){ return; }
+    // solo animar si el jugador está explorando (no en menús/combate)
+    _ambientFrame=(_ambientFrame+1)&0xffff;
+    if(typeof renderMap==='function') renderMap();
+  }, 620);   // ~1.6 fps: suficiente para "vida" sin gastar batería
+  if(typeof startAmbientParticles==='function') startAmbientParticles();
+  if(typeof startAmbientSound==='function') startAmbientSound();
+}
+function stopAmbientAnim(){ if(_ambientTimer){ clearInterval(_ambientTimer); _ambientTimer=null; } if(typeof stopAmbientParticles==='function') stopAmbientParticles(); if(typeof stopAmbientSound==='function') stopAmbientSound(); }
 let _mapDirty=false, _rafPending=false;
 function renderMap(){
   _mapDirty=true;
@@ -7304,9 +7665,21 @@ let _lastFitW=0,_lastFitH=0;
 window.invalidateFitCache=function(){ _lastFitW=-1; _lastFitH=-1; };
 function renderMapNow(){
   if(G.inCombat){ renderCombat(); return; }
+  if(!_ambientTimer && typeof startAmbientAnim==='function') startAmbientAnim();
   { let _vp=document.getElementById('viewport');
     if(_vp) _vp.classList.remove('combat-mode'); }
   const vp = document.getElementById('viewport');
+  // ── PALETA POR ZONA: ajusta contraste/brillo según el bioma ──
+  if(vp){
+    let biomeId = (G.map && G.map.biome) || '';
+    let palClass = 'pal-'+biomeId;
+    if(vp._palApplied!==palClass){
+      // quitar cualquier paleta previa y poner la nueva
+      vp.className = vp.className.replace(/\bpal-\S+/g,'').trim();
+      if(biomeId && !G.isHub) vp.classList.add(palClass);
+      vp._palApplied=palClass;
+    }
+  }
   // autoajustar la fuente si el tamaño del panel cambió (PC sin F11, resize, etc.)
   if(vp && typeof fitViewport==='function'){
     let w=vp.clientWidth, h=vp.clientHeight;
@@ -7339,6 +7712,53 @@ function renderMapNow(){
   let featAt={};
   for(let f of G.features) featAt[f.x+','+f.y]=f;
 
+  // ── ILUMINACIÓN ─────────────────────────────────────────────────────────
+  // El jugador porta una luz (radio base). Antorchas, hogueras, fuego y algunos
+  // enemigos/cristales también emiten luz. Cada celda recibe un nivel 0..1 según
+  // su distancia a la fuente más cercana; fuera de todo alcance queda en penumbra.
+  // Es barato: solo recorre las fuentes cercanas a la cámara.
+  let lightOn = !(G.map && G.map.biome==='santuario') && LIGHT_ENABLED;
+  let sources=[];
+  if(lightOn){
+    // luz del jugador (un poco mayor si lleva antorcha encendida)
+    let pr = 5.2;
+    try{ if(G.player.torchLit || (G.player.equip&&G.player.equip.offhand&&/antorcha|torch|farol|lantern/i.test(G.player.equip.offhand.id||''))) pr=7.0; }catch(e){}
+    sources.push({x:px,y:py,r:pr,warm:true});
+    // fuentes fijas del mapa dentro/alrededor del viewport
+    for(let f of G.features){
+      if(f.x<camX-2||f.x>camX+vw+2||f.y<camY-2||f.y>camY+vh+2) continue;
+      if(f.type==='campfire'||f.type==='safe_campfire') sources.push({x:f.x,y:f.y,r:6.5,warm:true});
+      else if(f.type==='forge') sources.push({x:f.x,y:f.y,r:4.5,warm:true});
+      else if(f.type==='altar_lunar'||f.type==='heart_altar') sources.push({x:f.x,y:f.y,r:3.5,warm:false});
+      else if(f.type==='void_relic') sources.push({x:f.x,y:f.y,r:3.2,warm:false});   // un halo tenue en la sala vacía
+    }
+    // tiles luminosos (fuego, cristales) cercanos
+    for(let sy=Math.max(0,camY-1); sy<Math.min(G.map.h,camY+vh+1); sy++){
+      for(let sx=Math.max(0,camX-1); sx<Math.min(G.map.w,camX+vw+1); sx++){
+        let tt=G.map.tiles[sy][sx];
+        if(tt===TILE.FIRE) sources.push({x:sx,y:sy,r:4.0,warm:true});
+        else if(tt===TILE.CRYSTAL) sources.push({x:sx,y:sy,r:2.6,warm:false});
+      }
+    }
+    // enemigos que brillan (los marcados con glow)
+    for(let e of G.enemies){ if(e.alive && e._glows && e.x>=camX-1&&e.x<=camX+vw&&e.y>=camY-1&&e.y<=camY+vh) sources.push({x:e.x,y:e.y,r:3.0,warm:e._glowWarm!==false}); }
+  }
+  // nivel de luz de una celda: 1 = plena, 0 = oscuro. El máximo entre fuentes.
+  function lightAt(mx,my){
+    if(!lightOn) return 1;
+    let best=0;
+    for(let s of sources){
+      let dx=mx-s.x, dy=my-s.y;
+      let d=Math.sqrt(dx*dx+dy*dy);
+      if(d<=s.r){
+        let lvl=1-(d/s.r);           // lineal: centro pleno, borde 0
+        lvl=0.25+0.75*lvl;           // suelo mínimo dentro del radio (no negro puro)
+        if(lvl>best)best=lvl;
+      }
+    }
+    return best;
+  }
+
   let html='';
   for(let vy=0;vy<vh;vy++){
     let row='';
@@ -7350,7 +7770,7 @@ function renderMapNow(){
       if(!seen){ row+=span(' ','--bg'); continue; }
 
       // player
-      if(mx===px&&my===py){ row+=span('@','--amber-glow',true); continue; }
+      if(mx===px&&my===py){ row+=spanEntity('@','--amber-glow',true,null,lightAt(mx,my)); continue; }
 
       if(vis){
         // enemies
@@ -7360,7 +7780,7 @@ function renderMapNow(){
           if(e.statuses && e.statuses.stealth && G.player.passive!=='percepcion'){
             // hidden — show tile
           } else {
-            row+=span(e.glyph, e.color, e.aggro);
+            row+=spanEntity(e.glyph, e.color, e.aggro, e.name, lightAt(mx,my));
             continue;
           }
         }
@@ -7382,20 +7802,21 @@ function renderMapNow(){
         // features
         if(featAt[key]){
           let f=featAt[key];
+          if(f.type==='void_relic'){ row+=span(f.glyph||'✦', f.col||'--ink-bright', true); continue; }
           if(f.type==='corpse'){ row+=span('☠︎', f.looted?'--ink-dim':'--ink-bright'); continue; }
           if(f.type==='prop'){ row+=span(f.glyph||'▪','--ink-dim'); continue; }
           if(f.type==='plant'){ row+=span('❀','--green'); continue; }
           if(f.type==='altar_profano'){ row+=span('♁', f.used?'--ink-dim':'--red-bright'); continue; }
-          if(f.type==='door'){ let t=tileGlyph(G.map.tiles[my][mx]); row+=span(t.ch,t.col); continue; }
+          if(f.type==='door'){ let t=tileGlyph(G.map.tiles[my][mx], mx, my); row+=span(t.ch,t.col); continue; }
           if(f.type==='trap'){
-            if(!f.revealed){ let t=tileGlyph(G.map.tiles[my][mx]); row+=span(t.ch,t.col); continue; }
+            if(!f.revealed){ let t=tileGlyph(G.map.tiles[my][mx], mx, my); row+=span(t.ch,t.col); continue; }
             row+=span('^', f.armed?'--red-bright':'--ink-dim');
             continue;
           }
           if(f.type==='chest') row+=span(f.opened?'⊡':'▣', f.opened?'--ink-dim':'--gold');
           else if(f.type==='altar') row+=span('♁', f.used?'--ink-dim':'--green');
           else if(f.type==='merchant') row+=span('☺︎', '--gold', true);
-          else if(f.type==='campfire') row+=span('✦', '--amber-glow', true);
+          else if(f.type==='campfire'){ let ph=(_ambientFrame+_posHash(mx,my,3))%3; row+=span(['✦','✧','❋'][ph], ph===2?'--amber':'--amber-glow', true); }
           else if(f.type==='incursion_portal') row+=span('▼', '--violet-bright', true);
           else if(f.type==='storage') row+=span('⌸', '--gold');
           else if(f.type==='eco_grave') row+=span('☩', '--ink-bright');
@@ -7413,7 +7834,7 @@ function renderMapNow(){
           else if(f.type==='exit_key') row+=span(f.taken?'·':'⚷︎', f.taken?'--ink-dim':'--gold', !f.taken);
           else if(f.type==='heart_altar') row+=span('☉', '--violet-bright', !f.used);
           else if(f.type==='altar_lunar') row+=span(f.used?'☾︎':'☽︎', f.used?'--ink-dim':'--gold', !f.used);
-          else { let t=tileGlyph(G.map.tiles[my][mx]); row+=span(t.ch,t.col); }
+          else { let t=tileGlyph(G.map.tiles[my][mx], mx, my); row+=span(t.ch,t.col); }
           continue;
         }
       } else {
@@ -7423,9 +7844,11 @@ function renderMapNow(){
           if(f.type==='chest'){ row+=span(f.opened?'⊡':'▣','--line-bright'); continue; }
         }
       }
-      // tile
-      let t=tileGlyph(G.map.tiles[my][mx]);
-      row+= vis ? span(t.ch,t.col) : span(t.ch,'--ink-dim', false, true);
+      // tile (con decoración de fondo si la casilla la tiene y es suelo)
+      let t=tileGlyph(G.map.tiles[my][mx], mx, my);
+      let decoCell = (G.map.deco && G.map.tiles[my][mx]===TILE.FLOOR) ? G.map.deco[key] : null;
+      if(decoCell){ t={ch:decoCell.ch, col:decoCell.col}; }
+      row+= vis ? span(t.ch,t.col, false, false, null, lightAt(mx,my)) : span(t.ch,'--ink-dim', false, true);
     }
     html+='<span class="vp-row">'+row+'</span>';
   }
@@ -7456,16 +7879,44 @@ function renderMapNow(){
   if(typeof renderMinimap==='function') renderMinimap();
 }
 
-function span(ch, colVar, bright, dim, title){
+function span(ch, colVar, bright, dim, title, light){
   let c=getCssVar(colVar)||'#888';
   let style=`color:${c}`;
   if(bright) style+=`;text-shadow:0 0 6px var(--red-bright),0 0 3px var(--red-bright)`;
   if(dim) style+=';opacity:0.45';
+  // iluminación: atenúa el brillo de la celda según la luz recibida (1=plena)
+  else if(light!==undefined && light<0.999){
+    let op=Math.max(0.12, light).toFixed(2);   // nunca del todo negro si es visible
+    style+=';opacity:'+op;
+  }
   // escape
   if(ch==='<')ch='&lt;'; if(ch==='>')ch='&gt;'; if(ch==='&')ch='&amp;';
   let cls = bright ? ' class="aggro-blink"' : '';
   let ttl = title ? ` title="${String(title).replace(/"/g,'&quot;')}"` : '';
   return `<span${cls}${ttl} style="${style}">${ch}</span>`;
+}
+
+// ── PROFUNDIDAD: entidades con SOMBRA proyectada ──────────────────────────
+// Las criaturas (jugador, enemigos) reciben una sombra oscura desplazada hacia
+// abajo-derecha, como si tuvieran volumen y proyectaran sombra sobre el suelo.
+// Da sensación de que "están de pie" en la escena, no pintadas planas. Barato:
+// es solo text-shadow. `glow` mantiene el resplandor de los que ya brillaban.
+function spanEntity(ch, colVar, glow, title, light){
+  let c=getCssVar(colVar)||'#888';
+  let style='color:'+c+';position:relative';
+  // sombra base (profundidad) + resplandor opcional del aura de agresión
+  let shadow='1px 2px 2px rgba(0,0,0,0.9), 0 1px 1px rgba(0,0,0,0.7)';
+  if(glow) shadow = '0 0 6px '+c+', 0 0 3px '+c+', '+shadow;
+  style+=';text-shadow:'+shadow;
+  // atenuación por luz (la sombra permanece; solo baja el brillo del glifo)
+  if(light!==undefined && light<0.999){
+    let op=Math.max(0.30, light).toFixed(2);   // las entidades nunca tan tenues como el suelo
+    style+=';opacity:'+op;
+  }
+  if(ch==='<')ch='&lt;'; if(ch==='>')ch='&gt;'; if(ch==='&')ch='&amp;';
+  let cls = glow ? ' class="aggro-blink"' : '';
+  let ttl = title ? ' title="'+String(title).replace(/"/g,'&quot;')+'"' : '';
+  return '<span'+cls+ttl+' style="'+style+'">'+ch+'</span>';
 }
 
 function itemGlyph(item){
@@ -7796,6 +8247,15 @@ function onPlayerMoved(){
     else if(f.type==='plant') logMsg('❀ Una planta útil crece aquí. Pulsa '+kbdHtml('E')+' para recogerla.','sys');
     else if(f.type==='corpse'&&!f.looted) logMsg('☠︎ Restos de un devorado. Pulsa '+kbdHtml('E')+' para registrarlos.','sys');
     else if(f.type==='altar_profano'&&!f.used) logMsg('♁ Un altar PROFANADO. Rezar aquí es una apuesta… Pulsa '+kbdHtml('E')+' si te atreves.','bad');
+    else if(f.type==='void_relic'){
+      // mensaje contemplativo la primera vez; luego uno breve
+      if(!f.examined){
+        f.examined=true;
+        logMsg('En el centro de la sala vacía: '+(f.name||'algo solitario')+'. El silencio pesa. Pulsa '+kbdHtml('E')+' para contemplarlo.','flavor');
+      } else {
+        logMsg('※ '+(f.name||'la pieza solitaria')+' aguarda en el vacío.','flavor');
+      }
+    }
     else if(f.type==='prop') logMsg('※ '+(f.propName||'Restos de otra época')+'.','flavor');
   }
   // wandering aggro: nearby enemies wake
@@ -7820,6 +8280,14 @@ function onPlayerMoved(){
 // after the player takes any turn outside combat: enemies wander, check ambush
 function postPlayerTurn(){
   const p=G.player;
+  // RED DE SEGURIDAD DE MUERTE: si por cualquier fuente de daño (sobrecalentamiento
+  // mágico, veneno, hambre, sangrado…) la vida cayó a 0 o menos fuera de combate,
+  // disparar la muerte aquí. Antes algunos daños solo mataban dentro de combate y
+  // el jugador quedaba "vivo" con hp negativa, atascado sin poder moverse.
+  if(p && p.hp<=0 && !G.combat && !G._deathShown){
+    p.hp=0;
+    if(typeof showDeathScreen==='function'){ G._deathShown=true; updateUI(); showDeathScreen(); return; }
+  }
   // LOGRO de supervivencia: turnos aguantados en esta partida
   if(typeof achOnTurn==='function' && G.turn%10===0) achOnTurn(G.turn);
   // AUTOSAVE cada 10 turnos (ranura separada, no molesta al jugador)
@@ -8109,7 +8577,14 @@ function checkOverheat(){
     if(rchance(0.4)) p.statuses.burn={turns:2};
   }
 
-  if(p.hp<=0&&G.combat&&typeof endCombat==='function'){updateUI();endCombat('death');}
+  // comprobar muerte SIEMPRE (no solo en combate): este daño mágico ocurre
+  // también explorando, y antes solo mataba si había combate → el jugador podía
+  // quedar con vida negativa y "atascado" (vivo con hp<=0).
+  if(p.hp<=0){
+    p.hp=0;
+    if(G.combat && typeof endCombat==='function'){ updateUI(); endCombat('death'); }
+    else if(typeof showDeathScreen==='function'){ updateUI(); showDeathScreen(); }
+  }
 }
 
 function regenKros(amount){
@@ -8169,8 +8644,9 @@ function tickStatuses(entity, inCombat){
   for(let k of remove) delete entity.statuses[k];
   // overheat depende del calor
   if(entity===G.player) updateOverheatStatus();
-  // regen de Aliento al explorar para clases no-mágicas
-  if(entity===G.player && entity.cls!=='magic' && typeof regenStamina==='function'){
+  // regen de Aliento al explorar: TODO personaje tiene Aliento y puede usar
+  // habilidades que lo consumen (clase libre), así que todos lo regeneran.
+  if(entity===G.player && (entity.staminaMax||0)>0 && typeof regenStamina==='function'){
     regenStamina(1);
   }
 }
@@ -8710,8 +9186,17 @@ function classBaseDef(){
 // ---------- INICIAR COMBATE ----------
 function startCombat(triggerEnemy){
   // ¿es un JEFE? → tema de jefe; si no, tema de combate normal
-  { let esJefe = triggerEnemy && (triggerEnemy.boss===true || triggerEnemy.ai==='boss');
-    if(typeof updateMusicForState==='function') updateMusicForState(esJefe?'boss':'combat'); }
+  let _esJefe = triggerEnemy && (triggerEnemy.boss===true || triggerEnemy.ai==='boss');
+  { if(typeof updateMusicForState==='function') updateMusicForState(_esJefe?'boss':'combat'); }
+  // SECUENCIA DE APARICIÓN DE JEFE (cinematográfica): solo la primera vez que se
+  // ve a este jefe, para no repetirla si el combate se re-renderiza.
+  if(_esJefe && typeof bossIntro==='function'){
+    if(!G._bossIntroShown) G._bossIntroShown={};
+    if(!G._bossIntroShown[triggerEnemy.id]){
+      G._bossIntroShown[triggerEnemy.id]=true;
+      try{ bossIntro(triggerEnemy); }catch(e){}
+    }
+  }
   // (aviso de bioma al final de la función, tras montar el combate)
   // LOCURA: la mente quebrada tropieza al ver al enemigo
   {
@@ -9364,6 +9849,19 @@ function resolveSpellEffect(spell, target, power, phi){
         combatLog('◈ '+(sd?sd.name:k)+' activo ('+spell.effect[k]+' turnos).','good');
       }
     }
+    // EFECTO VISUAL de los hechizos sobre uno mismo (escudo, sigilo, buffs…):
+    // antes solo la curación mostraba algo; el resto era invisible. Ahora todos
+    // dejan un efecto sobre el jugador según su naturaleza.
+    if(window.combatFX){
+      let _pid = (typeof playerCbid==='function')?playerCbid():-1;
+      if(_pid>=0){
+        let col = spell.color || '--cyan';
+        if(spell.effect.shield||spell.effect.guard){ combatFX.spell(_pid, col); combatFX.word&&combatFX.word(_pid,'◊ ESCUDO', col); }
+        else if(spell.effect.stealth){ combatFX.spell(_pid, '--violet'); combatFX.word&&combatFX.word(_pid,'◐ OCULTO','--violet'); }
+        else if(spell.effect.evasion){ combatFX.spell(_pid, '--cyan'); }
+        else if(!spell.effect.heal){ combatFX.spell(_pid, col); }   // buff genérico (la curación ya tiene el suyo)
+      }
+    }
     return;
   }
   // summon
@@ -9478,7 +9976,7 @@ function resolveSpellEffect(spell, target, power, phi){
     let armor=Math.floor((e.armor||0)*0.5);
     dmg=Math.max(1,dmg-armor);
     e.hp-=dmg;
-    if(window.combatFX){ let _id=cbidOf(e); if(_id>=0){ combatFX.hit(_id,dmg,false,spell.color||'--cyan'); combatFX.spell(_id, spell.color||'--cyan'); } }
+    if(window.combatFX){ let _id=cbidOf(e); if(_id>=0){ combatFX.hit(_id,dmg,false,spell.color||'--cyan'); combatFX.spellFX(_id, spell, playerCbid?playerCbid():null); } }
     combatLog((tc===target?'➤ ':'  ')+e.name+(resist>0?' (resiste)':'')+' sufre '+dmg+'.', resist>0?'flavor':'hit');
     // antimagia: drena Kros del jugador… del enemigo (recupera tu Kros)
     if(spell.drainsKros){ let dr=rint(3,7); G.player.kros=Math.min(G.player.krosMax,G.player.kros+dr); combatLog('  ∅ Drenas '+dr+' Kros del enemigo.','magic'); }
@@ -10225,6 +10723,7 @@ function endCombat(result){
 
   if(result==='victory'){
     combatLog('✦ VICTORIA. El campo se aquieta.','sys');
+    if(typeof sfx==='function') sfx('victory');   // fanfarria de victoria
     // LOGRO 'intacto': ganar sin recibir un solo golpe frente a 3+ enemigos
     if(c && c.flawless && typeof achOnFlawless==='function') achOnFlawless(c.startEnemies||0);
     if(c.pendingLoot&&c.pendingLoot.length){
@@ -10839,8 +11338,10 @@ function renderExploreActions(){
   // standard actions
   html+=`<span class="cmd" onclick="Game.rest()"><span class="key">R</span> Descansar</span>`;
   html+=`<span class="cmd" onclick="UI.showTab('inv')"><span class="key">I</span> Inventario</span>`;
-  let hasAb = p.cls==='magic'?p.spells.length:(p.skills&&p.skills.length);
-  if(hasAb){ let lbl=p.cls==='magic'?'Hechizos':'Habilidades'; html+=`<span class="cmd" onclick="UI.showTab('spells')"><span class="key">C</span> ${lbl}</span>`; }
+  let _skl = (typeof availableSkills==='function') ? availableSkills(p) : (p.skills||[]);
+  let hasAb = classUsesMagic()?(p.spells&&p.spells.length):(_skl.length);
+  if(hasAb){ let lbl=classUsesMagic()?'Hechizos':'Habilidades'; html+=`<span class="cmd" onclick="UI.showTab('spells')"><span class="key">C</span> ${lbl}</span>`; }
+  html+=`<span class="cmd" onclick="UI.showTab('tree')"><span class="key">T</span> Árbol</span>`;
   html+=`<span class="cmd" onclick="Game.search()"><span class="key">F</span> Examinar</span>`;
 
   bar.innerHTML=html;
@@ -10865,11 +11366,18 @@ function renderInfoTabs(){
     if(t.id==='spells') name = (G.player&&G.player.cls!=='magic')?'Habilidades':'Hechizos';
     html+=`<div class="tab ${currentTab===t.id?'active':''}" onclick="UI.showTab('${t.id}')">${name}</div>`;
   }
-  el.innerHTML=html;
+  // solo reescribir las cabeceras si cambiaron (evita trabajo por paso)
+  if(el && el._lastTabsHtml!==html){ el.innerHTML=html; el._lastTabsHtml=html; }
   renderInfoBody();
 }
 
 UI.showTab=function(id){
+  if(typeof sfx==='function') sfx('uiTab');
+  // en móvil los paneles se ven en modales, no en la columna lateral oculta
+  if((typeof isMobileLayout==='function') && isMobileLayout() && typeof UI.openMobilePanel==='function'){
+    UI.openMobilePanel(id);
+    return;
+  }
   currentTab=id;
   renderInfoTabs();
 };
@@ -10930,16 +11438,31 @@ UI.invTab=function(tab){
   if(mobHost){ mobHost.innerHTML=newHtml; }
 };
 
-function renderInfoBody(){
+let _lastInfoBodyKey='';
+let _lastInfoBodyHtml='';
+let _lastInfoBodyTab='';
+function renderInfoBody(force){
   let el=document.getElementById('info-body');
+  if(!el) return;
+  let html='';
   switch(currentTab){
-    case 'inv': el.innerHTML=renderInventory(); break;
-    case 'spells': el.innerHTML=renderSpells(); break;
-    case 'equip': el.innerHTML=renderEquip(); break;
-    case 'craft': el.innerHTML=renderCraft(); break;
-    case 'tree': el.innerHTML=renderSkillTree(); break;
-    case 'lore': el.innerHTML=renderBestiary(); break;
+    case 'inv': html=renderInventory(); break;
+    case 'spells': html=renderSpells(); break;
+    case 'equip': html=renderEquip(); break;
+    case 'craft': html=renderCraft(); break;
+    case 'tree': html=renderSkillTree(); break;
+    case 'lore': html=renderBestiary(); break;
   }
+  // clave de contenido: pestaña + html. Si NO cambió respecto a la última vez,
+  // no tocamos el DOM ni re-disparamos la animación → sin titileo al caminar.
+  let key=currentTab+'|'+html.length;
+  let changedTab = (currentTab !== _lastInfoBodyTab);
+  if(!force && !changedTab && html===_lastInfoBodyHtml) return;   // idéntico: no hacer nada
+  el.innerHTML=html;
+  _lastInfoBodyHtml=html;
+  _lastInfoBodyTab=currentTab;
+  // la animación de fundido SOLO al cambiar de pestaña (no en cada refresco de datos)
+  if(changedTab){ el.style.animation='none'; void el.offsetWidth; el.style.animation=''; }
 }
 
 // ═══ ÁRBOL DE HABILIDADES (pestaña) ═══
@@ -11089,9 +11612,25 @@ function renderInventory(){
       let _w=(typeof DATA.itemWeight==='function')?(DATA.itemWeight('consumable',inv.id)*(inv.qty||1)).toFixed(1):'';
       let _useAll=(inv.qty>=3 && it.effect && (it.effect.heal||it.effect.kros||it.effect.stamina))
         ? `<span onclick="event.stopPropagation();UI.useAllItem('${inv.id}')" title="Usar todos" style="cursor:pointer;color:var(--amber);margin-left:8px;padding:0 4px">≡</span>` : '';
-      html+=`<div class="lrow" onclick="UI.useItemExplore('${inv.id}')" onmouseenter="UI.tip(event,'${inv.id}','consumable')" onmouseleave="UI.hideTip()">
-        <span class="nm"><span class="ic" style="color:${getCssVar(it.color)}">${it.glyph}</span> ${it.name} <span class="c-dim">×${inv.qty}</span></span>
-        <span class="meta"><span class="c-dim small">${_w}pk · </span>usar${_useAll}</span></div>`;
+      // efectos resumidos como etiquetas (sin necesidad de hover)
+      let fx=[];
+      let _fmt=function(v){ return Array.isArray(v) ? (v[0]+'–'+v[1]) : v; };
+      if(it.effect){
+        if(it.effect.heal) fx.push('<span class="fx-tag fx-heal">+'+_fmt(it.effect.heal)+' VIT</span>');
+        if(it.effect.kros) fx.push('<span class="fx-tag fx-kro">+'+_fmt(it.effect.kros)+' KRO</span>');
+        if(it.effect.stamina) fx.push('<span class="fx-tag fx-sta">+'+_fmt(it.effect.stamina)+' ALI</span>');
+        if(it.effect.hunger) fx.push('<span class="fx-tag fx-ham">+'+_fmt(it.effect.hunger)+' HAM</span>');
+        if(it.effect.thirst) fx.push('<span class="fx-tag fx-sed">+'+_fmt(it.effect.thirst)+' SED</span>');
+        if(it.effect.focus) fx.push('<span class="fx-tag fx-kro">foco +'+_fmt(it.effect.focus)+'</span>');
+        if(it.effect.cure) fx.push('<span class="fx-tag fx-cure">cura estados</span>');
+        if(it.effect.madness) fx.push('<span class="fx-tag fx-loc">'+(it.effect.madness<0?'':'+')+_fmt(it.effect.madness)+' LOC</span>');
+      }
+      let warn = it.warn ? '<span class="fx-tag fx-warn">⚠ 3 Umbrales</span>' : '';
+      html+=`<div class="lrow lrow-item" onclick="UI.useItemExplore('${inv.id}')">
+        <div class="li-main"><span class="nm"><span class="ic" style="color:${getCssVar(it.color)}">${it.glyph}</span> ${it.name} <span class="c-dim">×${inv.qty}</span></span>
+        <span class="meta"><span class="c-dim small">${_w}pk · </span>usar${_useAll}</span></div>
+        <div class="li-desc">${it.desc||''}</div>
+        ${fx.length||warn?'<div class="li-tags">'+fx.join('')+warn+'</div>':''}</div>`;
     }
   } else if(UI._invTab==='gear'){
     if(!gear.length) html+='<div class="c-dim small center mt">Sin equipo.</div>';
@@ -11106,10 +11645,32 @@ function renderInventory(){
       let it = g.kind==='weapon'?DATA.weapons.find(x=>x.id===g.id):DATA.armor.find(x=>x.id===g.id);
       if(!it)continue;
       let equipped = Object.values(p.equip).some(e=>e&&e.id===g.id);
-      html+=`<div class="lrow ${equipped?'equipped':''}">
-        <span class="nm" onclick="UI.equipItem('${g.id}','${g.kind}')" style="cursor:pointer;flex:1"><span class="ic" style="color:${getCssVar(it.color||'--ink-bright')}">${it.glyph}</span> ${it.name}${g.n>1?' <span class="c-dim">×'+g.n+'</span>':''}${equipped?' <span class="c-green small">[equipado]</span>':''}</span>
+      // stats inline según el tipo
+      let stats=[];
+      if(g.kind==='weapon'){
+        if(it.dmg) stats.push('<span class="fx-tag fx-dmg">⚔ '+it.dmg[0]+'–'+it.dmg[1]+'</span>');
+        if(it.range) stats.push('<span class="fx-tag">alc '+it.range+'</span>');
+        if(it.speed) stats.push('<span class="fx-tag">vel '+it.speed+'</span>');
+        if(it.crit) stats.push('<span class="fx-tag">crít '+Math.round(it.crit*100)+'%</span>');
+        // requisito de atributo (rojo si no se cumple)
+        if(typeof DATA.weaponReq==='function'){
+          let rq=DATA.weaponReq(it);
+          if(rq){ for(let st in rq){
+            let nm=(DATA.stats.find(s=>s.id===st)||{abbr:st}).abbr||st;
+            let have=p.totalStat?p.totalStat(st):0;
+            stats.push('<span class="fx-tag '+(have>=rq[st]?'':'fx-warn')+'">req '+nm+' '+rq[st]+'</span>');
+          } }
+        }
+      } else {
+        if(it.def!=null) stats.push('<span class="fx-tag fx-def">⛨ '+it.def+'</span>');
+        if(it.slot) stats.push('<span class="fx-tag">'+it.slot+'</span>');
+      }
+      html+=`<div class="lrow lrow-item ${equipped?'equipped':''}">
+        <div class="li-main"><span class="nm" onclick="UI.equipItem('${g.id}','${g.kind}')" style="cursor:pointer;flex:1"><span class="ic" style="color:${getCssVar(it.color||'--ink-bright')}">${it.glyph}</span> ${it.name}${g.n>1?' <span class="c-dim">×'+g.n+'</span>':''}${equipped?' <span class="c-green small">[equipado]</span>':''}</span>
         <span class="meta" onclick="UI.equipItem('${g.id}','${g.kind}')" style="cursor:pointer">${equipped?'—':'equipar'}</span>
-        ${equipped?'':`<span onclick="UI.dropItem('${g.id}','${g.kind}')" title="Soltar" style="cursor:pointer;color:var(--red);margin-left:8px;padding:0 4px">▽</span>`}</div>`;
+        ${equipped?'':`<span onclick="UI.dropItem('${g.id}','${g.kind}')" title="Soltar" style="cursor:pointer;color:var(--red);margin-left:8px;padding:0 4px">▽</span>`}</div>
+        ${it.desc?'<div class="li-desc">'+it.desc+'</div>':''}
+        ${stats.length?'<div class="li-tags">'+stats.join('')+'</div>':''}</div>`;
     }
   } else if(UI._invTab==='mat'){
     if(!mats.length) html+='<div class="c-dim small center mt">Sin materiales.</div>';
@@ -11290,6 +11851,11 @@ function openModal(title, bodyHtml, buttons, opts){
       span.className='cmd'+(b.danger?' danger':'');
       span.textContent=b.label;
       span.onclick=()=>{
+        // sonido de UI según la naturaleza del botón
+        let lbl=(b.label||'').toLowerCase();
+        if(b.danger || /cancel|marchar|volver|cerrar|no|salir|✕/.test(lbl)) sfx('uiCancel');
+        else if(b.action==='close') sfx('uiClose');
+        else sfx('uiConfirm');
         if(b.action==='close')closeModal();
         else if(typeof b.action==='function')b.action();
       };
@@ -11302,18 +11868,91 @@ function openModal(title, bodyHtml, buttons, opts){
   let xbtn=document.querySelector('#overlay .modal-h .t-btn');
   if(opts.noClose){ ov._noClose=true; if(xbtn) xbtn.style.display='none'; }
   else { ov._noClose=false; if(xbtn) xbtn.style.display=''; }
+  ov.classList.remove('closing');   // por si venía de un cierre en curso
   ov.classList.add('show');
+  if(typeof sfx==='function' && !ov.classList.contains('show-was')){ sfx('uiOpen'); }
+  // MÁQUINA DE ESCRIBIR: si el cuerpo trae elementos de diálogo (.dlg-type),
+  // se revelan letra por letra en secuencia, con la voz del hablante. Se marca
+  // el hablante con data-voice. Los botones del pie se ocultan hasta terminar.
+  try{
+    let body=document.getElementById('modal-body');
+    let typed=[];
+    if(body){
+      // 1) elementos marcados explícitamente con .dlg-type (siempre se animan)
+      body.querySelectorAll('.dlg-type').forEach(n=>typed.push(n));
+      // 2) AUTO-DETECCIÓN: solo en modales de un NPC del santuario (por el título).
+      //    Restringido a propósito: otros modales (creación, oaths, tiendas…)
+      //    también usan cursiva con « », y animarlos rompería su contenido.
+      if(!typed.length){
+        let titleLc=(document.getElementById('modal-title').textContent||'').toLowerCase();
+        let esNpc = /vig[íi]a|erudito|recluta|reencuad|el vig|el erud|el reclut|reencuadernadora/.test(titleLc);
+        if(esNpc){
+          body.querySelectorAll('div').forEach(function(n){
+            if(n.querySelector && n.querySelector('*')) return;   // solo nodos de texto puro
+            let st=(n.getAttribute&&n.getAttribute('style'))||'';
+            let txt=n.textContent||'';
+            if(/italic/.test(st) && /[«»]/.test(txt) && txt.length>4){ typed.push(n); }
+          });
+        }
+      }
+    }
+    if(typed && typed.length){
+      let seq=[];
+      typed.forEach(function(node){
+        // inferir la voz: data-voice, o por el título del modal
+        let voice=node.getAttribute&&node.getAttribute('data-voice');
+        if(!voice){
+          let t=(document.getElementById('modal-title').textContent||'').toLowerCase();
+          voice = t.indexOf('vig')>=0?'vigia' : t.indexOf('erud')>=0?'erudito'
+                : t.indexOf('recluta')>=0?'reclutador' : t.indexOf('reencuad')>=0||t.indexOf('libro')>=0?'reencuadernadora'
+                : 'default';
+        }
+        seq.push({node:node, text:node.textContent, voice:voice});
+        node.textContent='';
+      });
+      if(foot) foot.style.opacity='0.35';
+      let k=0;
+      function next(){
+        if(k>=seq.length){ if(foot) foot.style.opacity=''; return; }
+        let s=seq[k++];
+        typeWriter(s.node, s.text, {voice:s.voice, speed:26, onDone:next});
+      }
+      next();
+    }
+  }catch(e){}
 }
 function closeModal(){
   let _ov=document.getElementById('overlay');
   if(_ov && _ov._noClose) return;   // modal bloqueado (muerte): no se puede cerrar
-  _ov.classList.remove('show');
-  // si se cierra la ventana de creación de personaje, restaurar el menú (evita pantalla negra)
-  if(typeof CC!=='undefined' && CC && CC.active){
-    CC.active=false;
-    let ts=document.getElementById('titlescreen');
-    if(ts && (typeof G==='undefined' || !G || !G.player)){ ts.style.display='flex'; }  // solo si no hay partida en curso
+  // animación de salida: marcar 'closing', esperar a que termine, luego ocultar.
+  // Si el usuario tiene movimiento reducido, se oculta al instante.
+  let reduce=false;
+  try{ reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
+  let finish=function(){
+    // CLAVE: si mientras esperábamos la animación se abrió OTRO modal (el overlay
+    // volvió a 'show' y ya no está 'closing'), NO hacemos nada. Antes esto cerraba
+    // por error el modal recién abierto (p. ej. la creación tras elegir ranura).
+    if(!_ov.classList.contains('closing')) return;
+    _ov.classList.remove('show','closing');
+    if(typeof CC!=='undefined' && CC && CC.active){
+      CC.active=false;
+      let ts=document.getElementById('titlescreen');
+      if(ts && (typeof G==='undefined' || !G || !G.player)){ ts.style.display='flex'; }
+    }
+  };
+  if(reduce || !_ov.classList.contains('show')){
+    // cierre inmediato: forzar (sin la guarda de 'closing', porque no animamos)
+    _ov.classList.remove('show','closing');
+    if(typeof CC!=='undefined' && CC && CC.active){
+      CC.active=false;
+      let ts=document.getElementById('titlescreen');
+      if(ts && (typeof G==='undefined' || !G || !G.player)){ ts.style.display='flex'; }
+    }
+    return;
   }
+  _ov.classList.add('closing');
+  _ov.classList.remove('show');
+  setTimeout(finish, 190);   // coincide con la duración de overlayFadeOut (.18s)
 }
 UI.openModal=openModal; UI.closeModal=closeModal;
 // tocar/clicar el fondo oscuro (fuera del panel) cierra el modal — comodidad de app
@@ -11321,12 +11960,33 @@ UI.openModal=openModal; UI.closeModal=closeModal;
   let ov=document.getElementById('overlay');
   if(ov && !ov._backdropBound){
     ov._backdropBound=true;
-    ov.addEventListener('click', function(e){ if(e.target===ov && !ov._noClose) closeModal(); });
+    // Usamos 'mousedown'/'touchstart' para capturar DÓNDE empezó el gesto ANTES
+    // de que cualquier onclick re-renderice el modal (lo que borraría e.target y
+    // haría que un clic interior pareciera venir del fondo → cierre accidental).
+    let _downOnBackdrop=false;
+    let markDown=function(e){
+      let modal=document.getElementById('modal');
+      // el gesto empezó en el fondo solo si NO tocó el panel del modal ni sus hijos
+      _downOnBackdrop = !(modal && (e.target===modal || (modal.contains && modal.contains(e.target))));
+    };
+    ov.addEventListener('mousedown', markDown, true);
+    ov.addEventListener('touchstart', markDown, true);
+    ov.addEventListener('click', function(e){
+      // si hay texto escribiéndose, un toque lo completa de golpe (Undertale)
+      if(typeof flushTypewriters==='function' && flushTypewriters()){ _downOnBackdrop=false; return; }
+      // cerrar SOLO si el gesto empezó fuera del panel (en el fondo oscuro)
+      if(_downOnBackdrop && !ov._noClose){ closeModal(); }
+      _downOnBackdrop=false;
+    });
   }
 })();
 
 // ---------- TOOLTIPS ----------
 function showTip(ev, title, type, lines){
+  // En móvil NO usamos el tooltip flotante: no existe 'mouseleave' con el dedo,
+  // así que se quedaría pegado en pantalla. La info ya se muestra inline en las
+  // listas. El tooltip es solo una comodidad de escritorio (hover con ratón).
+  if((typeof isMobileLayout==='function') && isMobileLayout()) return;
   let tt=document.getElementById('tooltip');
   let html=`<div class="tt-title">${title}</div>`;
   if(type)html+=`<div class="tt-type">${type}</div>`;
@@ -11343,7 +12003,17 @@ function positionTip(ev){
   if(y+r.height>window.innerHeight) y=window.innerHeight-r.height-10;
   tt.style.left=x+'px'; tt.style.top=y+'px';
 }
-UI.hideTip=function(){ document.getElementById('tooltip').style.display='none'; };
+UI.hideTip=function(){ let t=document.getElementById('tooltip'); if(t) t.style.display='none'; };
+// red de seguridad: cualquier toque o scroll oculta el tooltip flotante, por si
+// alguno quedó visible (en móvil no debería aparecer, pero por las dudas).
+(function(){
+  if(typeof document!=='undefined' && !document._tipGuard){
+    document._tipGuard=true;
+    let hide=function(){ let t=document.getElementById('tooltip'); if(t&&t.style.display==='block') t.style.display='none'; };
+    document.addEventListener('touchstart', hide, {passive:true});
+    document.addEventListener('scroll', hide, {passive:true, capture:true});
+  }
+})();
 
 UI.tip=function(ev,id,kind){
   let it=DATA.consumables.find(x=>x.id===id);
@@ -12663,6 +13333,7 @@ function openCampfire(){
     btns.push({label:'◍ Mascotas', action:()=>Game.openPetKennel()});
   }
   btns.push({label:'▼ Guardar partida', action:()=>{ Game.saveGame(true); closeModal(); }});
+  btns.push({label:'▲ Exportar (llevar a otro equipo)', action:()=>{ Game.saveGame(true); Game.openExport(activeSlot()); }});
   btns.push({label:'Cerrar', action:'close'});
   openModal('✦ LA HOGUERA', html, btns);
 }
@@ -13118,6 +13789,7 @@ Game.startIncursion=function(siteId){
   }
   G.depth=t.base;
   G._revivedThisRun=false;   // la reanimación del compañero se recarga cada incursión
+  G._deathShown=false;       // la red de seguridad de muerte se rearma cada vida
   buildLevel(G.depth);
   // el PUNTO DE EXTRACCIÓN reemplaza a la escalera ascendente en el piso de entrada
   placeExtractionAtSpawn();
@@ -13152,6 +13824,14 @@ Game.talkToNpc=function(id){
   if(id==='erudito') return Game._npcErudito();
   if(id==='reclutador') return Game._npcReclutador();
 };
+// Genera una línea de diálogo hablado que se escribirá letra por letra con la
+// voz del NPC. `cls` extra opcional (p. ej. 'c-dim'). El texto va sin comillas
+// duplicadas; se añaden las « » aquí.
+function dlgLine(voice, text, cls){
+  let safe=String(text).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return '<div class="small mt dlg-type '+(cls||'')+'" data-voice="'+voice+'" style="font-style:italic;line-height:1.7">«'+safe+'»</div>';
+}
+window.dlgLine=dlgLine;
 // ═══ EL RECLUTADOR: contratación de compañeros ═══
 // los candidatos disponibles rotan cada semana (determinista)
 function recruitStock(){
@@ -13177,15 +13857,15 @@ Game._npcReclutador=function(root){
   // ── ramas de CHARLA (lore tipo RPG), sin tocar la contratación ──
   if(root==='quien'){
     let h='<div class="small" style="line-height:1.7"><b class="c-gold">EL RECLUTADOR</b> se encoge de hombros.</div>';
-    h+='<div class="small mt" style="font-style:italic">«¿Mi historia? Fui capitán de una compañía libre en las Guerras de las Casas. Buenos años, malas causas. Cuando el Edicto disolvió los ejércitos privados, me quedé sin guerra y con muchos hombres sin paga.»</div>';
-    h+='<div class="small mt c-dim">«Ahora los coloco aquí. La herida siempre necesita carne valiente, y yo siempre necesito mi comisión. Todos comen. Casi todos, al menos.»</div>';
+    h+=dlgLine('reclutador','¿Mi historia? Fui capitán de una compañía libre en las Guerras de las Casas. Buenos años, malas causas. Cuando el Edicto disolvió los ejércitos privados, me quedé sin guerra y con muchos hombres sin paga.');
+    h+=dlgLine('reclutador','Ahora los coloco aquí. La herida siempre necesita carne valiente, y yo siempre necesito mi comisión. Todos comen. Casi todos, al menos.','c-dim');
     return openModal('☗ EL RECLUTADOR', h, [{label:'◂ Volver', action:()=>Game._npcReclutador()},{label:'Marcharse',action:'close'}]);
   }
   if(root==='mercenarios'){
     let h='<div class="small" style="line-height:1.7"><b class="c-gold">EL RECLUTADOR</b> señala a las siluetas con el mentón.</div>';
-    h+='<div class="small mt" style="font-style:italic">«No son Ecos como tú. Son gente viva, con una vida que perder — por eso cobran caro, y por eso cuando mueren ahí abajo, mueren de verdad. Nada de volver a despertar. Trátalos bien.»</div>';
-    h+='<div class="small mt c-dim">«Cada uno pelea a su manera: el guerrero aguanta al frente, el arquero castiga de lejos, el hechicero rompe formaciones, el sanador te mantiene en pie, el pícaro busca la espalda. Arma tu compañía con cabeza.»</div>';
-    h+='<div class="small mt c-dim">«¿Un secreto? Si caes ahí abajo y aún te queda un compañero en pie, puede que te arrastre de vuelta a la vida. Una vez. Elige bien a quién llevas.»</div>';
+    h+=dlgLine('reclutador','No son Ecos como tú. Son gente viva, con una vida que perder — por eso cobran caro, y por eso cuando mueren ahí abajo, mueren de verdad. Nada de volver a despertar. Trátalos bien.');
+    h+=dlgLine('reclutador','Cada uno pelea a su manera: el guerrero aguanta al frente, el arquero castiga de lejos, el hechicero rompe formaciones, el sanador te mantiene en pie, el pícaro busca la espalda. Arma tu compañía con cabeza.','c-dim');
+    h+=dlgLine('reclutador','¿Un secreto? Si caes ahí abajo y aún te queda un compañero en pie, puede que te arrastre de vuelta a la vida. Una vez. Elige bien a quién llevas.','c-dim');
     return openModal('☗ EL RECLUTADOR', h, [{label:'◂ Volver', action:()=>Game._npcReclutador()},{label:'Marcharse',action:'close'}]);
   }
   let hired=SAN.companions||[];
@@ -13839,6 +14519,7 @@ Game.toggleRelic=function(kind,id){
 };
 
 function buildLevel(depth){
+  G._deathShown=false;   // rearmar la red de seguridad de muerte en cada nivel/vida
   // ═══ NUEVO CICLO DE EXTRACCIÓN ═══
   // El Santuario es la BASE (depth 0): entre incursiones vives aquí.
   // Las incursiones (depth>0) son anomalía pura: entras, saqueas, EXTRAES o mueres.
@@ -14324,7 +15005,9 @@ function renderPlayerBlock(pc, actor){
         chips.push('<span class="cb-res"><span class="cb-resbar"><i style="width:'+Math.round(hPct*100)+'%;background:'+getCssVar(hCol)+'"></i></span><span class="small" style="color:'+getCssVar(hCol)+'" title="Calor de canalización">♨ '+Math.round(hPct*100)+'%</span></span>');
       } }
   }
-  if(p.cls!=='magic' && (p.staminaMax||0)>0){
+  // El Aliento se muestra SIEMPRE: en clase libre, todo personaje tiene
+  // habilidades de Aliento (al menos las innatas), así que siempre es relevante.
+  if((p.staminaMax||0)>0){
     let sPct=(p.stamina||0)/(p.staminaMax||1);
     chips.push('<span class="cb-res"><span class="cb-resbar"><i style="width:'+Math.round(Math.max(0,Math.min(1,sPct))*100)+'%;background:'+getCssVar('--green')+'"></i></span><span class="small" style="color:'+getCssVar('--green')+'">Aliento '+(p.stamina||0)+'/'+(p.staminaMax||0)+'</span></span>');
   }
@@ -14421,13 +15104,18 @@ function floatWord(cbid, text, colorVar){
 }
 
 // SACUDIDA DEL VIEWPORT: golpes fuertes sacuden toda la pantalla de combate
-function shakeViewport(hard){
+function shakeViewport(level){
   let vp=document.getElementById('combat-viewport')||document.getElementById('viewport');
   if(!vp)return;
-  vp.classList.remove('fx-shake','fx-shake-hard');
+  // level: true/'hard' = fuerte · 'soft' = suave · false/normal = medio
+  vp.classList.remove('fx-shake','fx-shake-hard','fx-shake-soft');
   void vp.offsetWidth;  // forzar reflow para reiniciar la animación
-  vp.classList.add(hard?'fx-shake-hard':'fx-shake');
-  setTimeout(()=>vp.classList.remove('fx-shake','fx-shake-hard'), hard?360:240);
+  let cls = (level===true||level==='hard') ? 'fx-shake-hard'
+          : (level==='soft') ? 'fx-shake-soft'
+          : 'fx-shake';
+  vp.classList.add(cls);
+  let dur = cls==='fx-shake-hard'?360:cls==='fx-shake-soft'?180:240;
+  setTimeout(()=>vp.classList.remove('fx-shake','fx-shake-hard','fx-shake-soft'), dur);
 }
 
 // ANIMACIÓN DE MUERTE: el glifo parpadea y se desvanece
@@ -14466,6 +15154,279 @@ function spellParticles(cbid, colVar){
     setTimeout(()=>p.remove(),520);
   }
 }
+
+// ═══ EFECTOS DE MAGIA ASCII ═══════════════════════════════════════════════
+// Ondas, explosiones y rayos hechos con caracteres. Se dibujan sobre la capa FX,
+// posicionados por el ancla del combatiente. Todos se limpian solos.
+
+// helper: crea un carácter flotante en (x,y absolutos) con animación libre
+function _fxChar(x,y,ch,col,size,life){
+  let el=document.createElement('div');
+  el.textContent=ch;
+  el.style.cssText='position:fixed;left:'+x+'px;top:'+y+'px;transform:translate(-50%,-50%);'+
+    'color:'+col+';font-family:monospace;font-weight:bold;font-size:'+(size||18)+'px;'+
+    'text-shadow:0 0 6px '+col+',0 0 3px #000;pointer-events:none;white-space:nowrap;z-index:9999';
+  _fxLayer.appendChild(el);
+  setTimeout(()=>el.remove(), life||600);
+  return el;
+}
+
+// ONDA EXPANSIVA: anillos de caracteres que crecen desde el objetivo.
+// Ideal para hechizos de área, empujes, ondas de choque.
+function spellWave(cbid, colVar, glyph){
+  ensureFXLayer(); if(!_fxLayer)return;
+  let a=combatantAnchor(cbid); if(!a)return;
+  let col=getCssVar(colVar||'--cyan');
+  let chars = glyph || '◜◝◞◟';
+  let ringChars=['(',')','◜','◝','◞','◟','⌒','⌣'];
+  // 3 anillos que se expanden en secuencia
+  for(let ring=0; ring<3; ring++){
+    setTimeout(()=>{
+      let n=8+ring*4;
+      let baseR=10;
+      for(let i=0;i<n;i++){
+        let ang=Math.PI*2*i/n;
+        let ch=ringChars[Math.floor(Math.random()*ringChars.length)];
+        let el=_fxChar(a.x, a.y, ch, col, 15, 480);
+        el.style.transition='transform .45s ease-out, opacity .45s ease-out';
+        let rr=baseR + 26 + ring*16;
+        let dx=Math.cos(ang)*rr, dy=Math.sin(ang)*rr;
+        requestAnimationFrame(()=>{
+          el.style.transform='translate(calc(-50% + '+dx+'px), calc(-50% + '+dy+'px)) scale(0.6)';
+          el.style.opacity='0';
+        });
+      }
+    }, ring*90);
+  }
+}
+
+// EXPLOSIÓN: estallido de caracteres * + x # @ que salen disparados y se apagan.
+// Para bolas de fuego, detonaciones, golpes contundentes.
+function spellExplosion(cbid, colVar){
+  ensureFXLayer(); if(!_fxLayer)return;
+  let a=combatantAnchor(cbid); if(!a)return;
+  let col=getCssVar(colVar||'--red-bright');
+  let hot=getCssVar('--amber-glow');
+  // núcleo brillante que crece y se desvanece
+  let core=_fxChar(a.x, a.y, '@', hot, 30, 360);
+  core.style.transition='transform .32s ease-out, opacity .32s ease-out';
+  requestAnimationFrame(()=>{ core.style.transform='translate(-50%,-50%) scale(2.2)'; core.style.opacity='0'; });
+  // esquirlas que salen en todas direcciones
+  let frags=['*','+','x','#','✦','∗','·'];
+  let n=14;
+  for(let i=0;i<n;i++){
+    let ang=(Math.PI*2*i/n)+Math.random()*0.4;
+    let dist=22+Math.random()*30;
+    let ch=frags[Math.floor(Math.random()*frags.length)];
+    let useHot=Math.random()<0.5;
+    let el=_fxChar(a.x, a.y, ch, useHot?hot:col, 13+Math.random()*8, 460);
+    el.style.transition='transform .42s ease-out, opacity .42s ease-out';
+    let dx=Math.cos(ang)*dist, dy=Math.sin(ang)*dist;
+    requestAnimationFrame(()=>{
+      el.style.transform='translate(calc(-50% + '+dx+'px), calc(-50% + '+dy+'px)) scale(0.5)';
+      el.style.opacity='0';
+    });
+  }
+  if(typeof shakeViewport==='function') shakeViewport('soft');
+}
+
+// RAYO: una línea de caracteres que recorre desde el lanzador hasta el objetivo.
+// Para rayos, flechas mágicas, proyectiles rápidos, cadenas eléctricas.
+function spellBolt(fromCbid, toCbid, colVar, glyph){
+  ensureFXLayer(); if(!_fxLayer)return;
+  let from=combatantAnchor(fromCbid), to=combatantAnchor(toCbid);
+  if(!from||!to)return;
+  let col=getCssVar(colVar||'--violet-bright');
+  let ch=glyph || '✦';
+  let boltChars=['-','=','~','≈','+','∗','·','×'];
+  let dx=to.x-from.x, dy=to.y-from.y;
+  let dist=Math.sqrt(dx*dx+dy*dy);
+  let steps=Math.max(4, Math.floor(dist/14));
+  for(let i=0;i<=steps;i++){
+    setTimeout(()=>{
+      let t=i/steps;
+      // pequeña oscilación perpendicular para dar sensación de energía
+      let perp=(Math.random()-0.5)*8;
+      let nx=-dy/dist, ny=dx/dist;
+      let x=from.x+dx*t + nx*perp;
+      let y=from.y+dy*t + ny*perp;
+      let c=(i===steps)?ch:boltChars[Math.floor(Math.random()*boltChars.length)];
+      let el=_fxChar(x, y, c, col, i===steps?20:14, 300);
+      el.style.transition='opacity .28s ease-out';
+      requestAnimationFrame(()=>{ el.style.opacity='0'; });
+    }, i*22);
+  }
+}
+
+// GRIETA / IMPACTO EN EL SUELO: caracteres angulares que irradian hacia abajo.
+// Para golpes de tierra, terremotos, impactos pesados.
+function spellCrack(cbid, colVar){
+  ensureFXLayer(); if(!_fxLayer)return;
+  let a=combatantAnchor(cbid); if(!a)return;
+  let col=getCssVar(colVar||'--ink-bright');
+  let cracks=['╱','╲','╳','▽','∨','⋀','⋁','/','\\'];
+  for(let i=0;i<7;i++){
+    let ang=(Math.PI*0.6)+(Math.PI*0.8*i/6)+ (Math.random()-0.5)*0.3; // hacia abajo
+    let dist=16+Math.random()*24;
+    let ch=cracks[Math.floor(Math.random()*cracks.length)];
+    let el=_fxChar(a.x, a.y+6, ch, col, 16, 520);
+    el.style.transition='transform .5s ease-out, opacity .5s ease-out';
+    let ddx=Math.cos(ang)*dist, ddy=Math.abs(Math.sin(ang))*dist*0.7;
+    requestAnimationFrame(()=>{
+      el.style.transform='translate(calc(-50% + '+ddx+'px), calc(-50% + '+ddy+'px))';
+      el.style.opacity='0';
+    });
+  }
+  if(typeof shakeViewport==='function') shakeViewport(false);
+}
+window.spellWave=spellWave; window.spellExplosion=spellExplosion;
+window.spellBolt=spellBolt; window.spellCrack=spellCrack;
+
+// ═══ PARTÍCULAS AMBIENTALES ASCII ═════════════════════════════════════════
+// Cenizas, polvo, hojas, gotas… que derivan sobre el viewport según el bioma.
+// Muy ligero: pocas partículas a la vez, timer lento, y se pausan en combate o
+// si el jugador desactivó las animaciones. Dan atmósfera sin coste real.
+let _ambientPartTimer=null;
+const _BIOME_PARTICLES={
+  cuevas_humedas:{chars:['·','˙',"'"],col:'--cyan',drift:0.3,fall:1.0,rate:0.5},   // goteo
+  minas:         {chars:['·','.',','],col:'--ink-dim',drift:0.2,fall:0.7,rate:0.4}, // polvo
+  ruinas:        {chars:['·','˙','.'],col:'--ink-dim',drift:0.3,fall:0.8,rate:0.3}, // polvo de piedra
+  cristales:     {chars:['✦','✧','·'],col:'--cyan',drift:0.4,fall:0.4,rate:0.4},    // destellos
+  bosque:        {chars:['❀','✿','·',','],col:'--green-dim',drift:1.2,fall:0.6,rate:0.5}, // hojas / esporas
+  volcanica:     {chars:['·','∗','˙'],col:'--red',drift:0.7,fall:0.5,rate:0.5},     // cenizas
+  cementerio:    {chars:['·','∵','˙'],col:'--violet',drift:0.6,fall:0.5,rate:0.35}, // esporas fúnebres
+  colmena:       {chars:['·','˙','∴'],col:'--amber',drift:0.5,fall:0.6,rate:0.4}    // motas
+};
+function spawnAmbientParticle(){
+  if(!AMBIENT_ANIM || !G || !G.map || G.inCombat) return;
+  let vp=document.getElementById('viewport'); if(!vp) return;
+  let cfg=_BIOME_PARTICLES[G.map.biome]; if(!cfg) return;
+  if(Math.random()>cfg.rate) return;   // no en cada tick
+  ensureFXLayer(); if(!_fxLayer) return;
+  let r=vp.getBoundingClientRect();
+  if(r.width<20) return;
+  // 1-2 partículas por vez
+  let n=1+(Math.random()<0.3?1:0);
+  for(let i=0;i<n;i++){
+    let startX=r.left + Math.random()*r.width;
+    let startY=r.top + Math.random()*r.height*0.4;   // nacen en la parte alta
+    let ch=cfg.chars[Math.floor(Math.random()*cfg.chars.length)];
+    let el=document.createElement('div');
+    el.textContent=ch;
+    el.style.cssText='position:fixed;left:'+startX+'px;top:'+startY+'px;'+
+      'color:'+getCssVar(cfg.col)+';font-family:monospace;font-size:12px;opacity:0;'+
+      'pointer-events:none;z-index:120;text-shadow:0 0 3px #000;'+
+      'transition:transform 3.2s linear, opacity 3.2s ease-in-out';
+    _fxLayer.appendChild(el);
+    let fallDist=r.height*0.55*cfg.fall + Math.random()*40;
+    let driftDist=(Math.random()-0.5)*80*cfg.drift;
+    requestAnimationFrame(()=>{
+      el.style.opacity='0.55';
+      el.style.transform='translate('+driftDist+'px,'+fallDist+'px)';
+      // desvanecer al final
+      setTimeout(()=>{ el.style.opacity='0'; }, 2000);
+    });
+    setTimeout(()=>el.remove(), 3300);
+  }
+}
+function startAmbientParticles(){
+  if(_ambientPartTimer) return;
+  _ambientPartTimer=setInterval(spawnAmbientParticle, 900);
+}
+function stopAmbientParticles(){ if(_ambientPartTimer){ clearInterval(_ambientPartTimer); _ambientPartTimer=null; } }
+window.startAmbientParticles=startAmbientParticles; window.stopAmbientParticles=stopAmbientParticles;
+
+// ═══ SONIDO AMBIENTE AUTOMÁTICO ════════════════════════════════════════════
+// De vez en cuando, un sonido puntual acorde al bioma (goteo en cuevas, tañido
+// en cavernas de cristal, crujido en cementerios…). Timer lento y probabilístico
+// para que sea sutil y no cansino. Se detiene en combate/menús.
+let _ambientSndTimer=null;
+const _BIOME_SOUNDS={
+  cuevas_humedas:{snd:'ambDrip',   chance:0.5},
+  minas:         {snd:'ambBone',   chance:0.25},
+  ruinas:        {snd:'ambWind',   chance:0.35},
+  cristales:     {snd:'ambCrystal',chance:0.45},
+  cementerio:    {snd:'ambBone',   chance:0.4},
+  volcanica:     {snd:'ambWind',   chance:0.4},
+  colmena:       {snd:'ambDrip',   chance:0.3},
+  bosque:        {snd:'ambWind',   chance:0.3}
+};
+function ambientSoundTick(){
+  if(!G || !G.map || G.inCombat) return;
+  if(G.settings && G.settings.sound===false) return;
+  // solo si hay un modal cerrado (no interrumpir diálogos)
+  let ov=document.getElementById('overlay');
+  if(ov && ov.classList.contains('show')) return;
+  let cfg=_BIOME_SOUNDS[G.map.biome];
+  if(!cfg) return;
+  if(Math.random()<cfg.chance && typeof sfx==='function') sfx(cfg.snd);
+}
+function startAmbientSound(){ if(_ambientSndTimer) return; _ambientSndTimer=setInterval(ambientSoundTick, 5200); }
+function stopAmbientSound(){ if(_ambientSndTimer){ clearInterval(_ambientSndTimer); _ambientSndTimer=null; } }
+window.startAmbientSound=startAmbientSound; window.stopAmbientSound=stopAmbientSound;
+
+// ═══ APARICIÓN DE JEFE: secuencia cinematográfica ═════════════════════════
+// Se atenúa la música, tiembla la pantalla, baja la luz, el nombre del jefe
+// aparece en grande, y los caracteres del escenario "se deforman" un instante.
+// Todo con ASCII y CSS; se limpia solo. Devuelve los ms que dura (para demorar
+// el inicio real del combate hasta que termine).
+function bossIntro(boss){
+  let dur=2600;
+  try{
+    let vp=document.getElementById('viewport');
+    let host=document.getElementById('viewport-panel')||vp;
+    // 1) bajar la música casi a cero durante la intro
+    let _restoreVol=null;
+    if(window.VSynth && VSynth.setMasterVolume){
+      try{ VSynth.setMasterVolume(0.06); }catch(e){}
+    }
+    // 2) atenuar la iluminación del escenario
+    if(vp){ vp.classList.add('boss-dim'); }
+    // 3) temblor sostenido de la pantalla
+    if(typeof shakeViewport==='function'){
+      shakeViewport(true);
+      setTimeout(()=>shakeViewport(false), 400);
+      setTimeout(()=>shakeViewport(true), 850);
+      setTimeout(()=>shakeViewport('soft'), 1300);
+    }
+    // 4) deformar los caracteres del escenario un instante
+    if(vp){
+      vp.classList.add('boss-warp');
+      setTimeout(()=>{ vp.classList.remove('boss-warp'); }, 1200);
+    }
+    // 5) cartel con el nombre del jefe, que aparece lentamente
+    if(host){
+      try{ let cs=getComputedStyle(host); if(cs.position==='static') host.style.position='relative'; }catch(e){}
+      let ov=document.createElement('div');
+      ov.className='boss-intro-overlay';
+      let nm=(boss&&boss.name)||'???';
+      let gl=(boss&&boss.glyph)||'Ω';
+      ov.innerHTML='<div class="boss-intro-glyph">'+gl+'</div>'+
+                   '<div class="boss-intro-sub">◈ ◈ ◈</div>'+
+                   '<div class="boss-intro-name">'+nm+'</div>';
+      host.appendChild(ov);
+      // haptic dramático
+      if(typeof haptic==='function') haptic([0,60,40,60,40,120]);
+      if(typeof sfx==='function'){ try{ sfx('death'); }catch(e){} }
+      // limpiar al terminar
+      setTimeout(()=>{ if(ov&&ov.remove) ov.style.opacity='0'; }, dur-500);
+      setTimeout(()=>{ if(ov&&ov.remove) ov.remove(); }, dur);
+    }
+    // 6) restaurar luz y volumen al final
+    setTimeout(()=>{
+      if(vp) vp.classList.remove('boss-dim');
+      // restaurar volumen de música al ajuste del jugador
+      if(window.VSynth && VSynth.setMasterVolume){
+        try{
+          let mv = (G&&G.settings&&G.settings.musicVolume!=null)?G.settings.musicVolume:0.7;
+          VSynth.setMasterVolume((_currentBaseVol||0.8)*mv);
+        }catch(e){}
+      }
+    }, dur);
+  }catch(e){}
+  return dur;
+}
+window.bossIntro=bossIntro;
 
 // ═══ BANNER DE ACCIÓN DE COMBATE ═══
 // Muestra en GRANDE, sobre el viewport, qué acaba de pasar y cuánto daño, para
@@ -15237,6 +16198,133 @@ function noise(dur, vol, filterFreq){
 }
 window.tone=tone; window.noise=noise;
 
+// ═══ GENERADORES DE SONIDO ENRIQUECIDOS ════════════════════════════════════
+// tone2: un tono con cuerpo — fundamental + un armónico suave + envolvente ADSR
+// controlable. Suena más "instrumento" y menos "pitido de PC". attack/decay/
+// release en segundos; el glide de pitch es opcional.
+function tone2(opts){
+  let c=_sfxCtx(); if(!c) return;
+  try{
+    let now=c.currentTime;
+    let f=Math.max(20, opts.freq||440);
+    let dur=opts.dur||0.15;
+    let wave=opts.wave||'triangle';
+    let vol=(opts.vol!=null?opts.vol:0.09)*_sfxMaster();
+    let a=opts.a!=null?opts.a:0.008;
+    let d=opts.d!=null?opts.d:dur*0.5;
+    let harm=opts.harm!=null?opts.harm:0.28;   // nivel del segundo armónico
+    // fundamental
+    let o=c.createOscillator(); o.type=wave;
+    o.frequency.setValueAtTime(f, now);
+    if(opts.toFreq && opts.toFreq!==f) o.frequency.exponentialRampToValueAtTime(Math.max(20,opts.toFreq), now+dur*0.9);
+    let g=c.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(vol, now+a);
+    g.gain.exponentialRampToValueAtTime(0.0001, now+Math.max(0.03,a+d));
+    o.connect(g); g.connect(c.destination);
+    o.start(now); o.stop(now+dur+0.05);
+    // armónico (una octava arriba, más tenue) para dar brillo
+    if(harm>0){
+      let o2=c.createOscillator(); o2.type='sine';
+      o2.frequency.setValueAtTime(f*2, now);
+      if(opts.toFreq) o2.frequency.exponentialRampToValueAtTime(Math.max(20,opts.toFreq*2), now+dur*0.9);
+      let g2=c.createGain();
+      g2.gain.setValueAtTime(0.0001, now);
+      g2.gain.linearRampToValueAtTime(vol*harm, now+a);
+      g2.gain.exponentialRampToValueAtTime(0.0001, now+Math.max(0.03,a+d));
+      o2.connect(g2); g2.connect(c.destination);
+      o2.start(now); o2.stop(now+dur+0.05);
+    }
+  }catch(e){}
+}
+window.tone2=tone2;
+
+// acorde: varias notas a la vez (para jingles y confirmaciones agradables)
+function chord(freqs, dur, wave, vol){
+  for(let i=0;i<freqs.length;i++){
+    tone2({freq:freqs[i], dur:dur, wave:wave||'triangle', vol:(vol||0.07), a:0.01, d:dur*0.6, harm:0.2});
+  }
+}
+window.chord=chord;
+
+// ═══ VOZ DE DIÁLOGO (estilo Undertale) ═════════════════════════════════════
+// Un bip corto por carácter mientras el texto se escribe. Cada NPC tiene su
+// "voz" (forma de onda + rango de tono), así hablan distinto. Los espacios y
+// signos no suenan. El pitch varía un poco por carácter para dar musicalidad.
+const NPC_VOICES = {
+  vigia:          {wave:'square',   base:230, spread:60,  vol:0.05, dur:0.045},  // grave, marcial
+  erudito:        {wave:'sine',     base:420, spread:90,  vol:0.045,dur:0.05 },  // suave, agudo
+  reencuadernadora:{wave:'triangle',base:340, spread:120, vol:0.05, dur:0.05 },  // cantarina, irregular
+  reclutador:     {wave:'sawtooth', base:180, spread:50,  vol:0.045,dur:0.05 },  // áspero, bajo
+  default:        {wave:'triangle', base:300, spread:80,  vol:0.05, dur:0.045}
+};
+function dialogueBlip(ch, voiceId){
+  if(G && G.settings && G.settings.sound===false) return;
+  // caracteres que no suenan
+  if(!ch || ch===' ' || ch==='\n' || ch==='\t') return;
+  let v = NPC_VOICES[voiceId] || NPC_VOICES.default;
+  // el tono depende del carácter (código) para que "cante" con el texto,
+  // acotado al rango de la voz; las vocales un pelín más altas.
+  let code = ch.charCodeAt(0);
+  let pitch = v.base + (code % 12) * (v.spread/12);
+  if('aeiouAEIOUáéíóú'.indexOf(ch)>=0) pitch *= 1.12;
+  if('.,;:!?…'.indexOf(ch)>=0) pitch *= 0.8;   // puntuación más grave
+  tone2({freq:pitch, dur:v.dur, wave:v.wave, vol:v.vol, a:0.004, d:v.dur*0.7, harm:0.15});
+}
+window.dialogueBlip=dialogueBlip;
+
+// ═══ MÁQUINA DE ESCRIBIR (revela texto letra por letra) ════════════════════
+// Escribe el texto de un elemento carácter por carácter, con un bip por letra
+// (la "voz" del hablante). Tocar/clic o Enter completa el texto de golpe. Al
+// terminar, llama onDone. Devuelve un control para cancelar.
+let _typewriters = [];
+function typeWriter(el, text, opts){
+  opts = opts || {};
+  let voiceId = opts.voice || 'default';
+  let speed = opts.speed || 28;           // ms por carácter
+  let onDone = opts.onDone || null;
+  let blipEvery = opts.blipEvery || 2;    // un bip cada N caracteres (no en todos, suena mejor)
+  el.textContent = '';
+  el.classList.add('typing');
+  let i=0, done=false, cnt=0;
+  let timer=null;
+  function finish(){
+    if(done) return; done=true;
+    if(timer){ clearTimeout(timer); timer=null; }
+    el.textContent = text;
+    el.classList.remove('typing');
+    let idx=_typewriters.indexOf(ctl); if(idx>=0)_typewriters.splice(idx,1);
+    if(onDone) try{ onDone(); }catch(e){}
+  }
+  function tick(){
+    if(done) return;
+    if(i>=text.length){ finish(); return; }
+    let ch=text[i];
+    el.textContent = text.slice(0, i+1);
+    // bip: no en cada carácter ni en espacios/puntuación repetida
+    if(ch!==' ' && ch!=='\n' && (cnt % blipEvery === 0)) dialogueBlip(ch, voiceId);
+    cnt++;
+    i++;
+    // pausa más larga tras signos de puntuación fuertes (ritmo natural)
+    let extra = ('.!?…'.indexOf(ch)>=0)?260 : (',;:'.indexOf(ch)>=0)?120 : 0;
+    timer=setTimeout(tick, speed+extra);
+  }
+  let ctl={ finish, isDone:()=>done };
+  _typewriters.push(ctl);
+  tick();
+  return ctl;
+}
+// completar todos los typewriters activos (al tocar/Enter)
+function flushTypewriters(){
+  if(!_typewriters.length) return false;
+  let any=false;
+  for(let t of _typewriters.slice()){ if(!t.isDone()){ t.finish(); any=true; } }
+  return any;
+}
+window.typeWriter=typeWriter; window.flushTypewriters=flushTypewriters;
+
+
+
 function sfx(kind){
   // respetar el ajuste del jugador (por defecto activado)
   if(G && G.settings && G.settings.sound===false){  return; }
@@ -15259,6 +16347,25 @@ function sfx(kind){
     case 'stairs':  tone(300,0.10,'sine',0.06,180); setTimeout(()=>tone(220,0.14,'sine',0.06,140),100); break;  // escalera: descenso
     case 'rest':    tone(440,0.20,'sine',0.05,330); setTimeout(()=>tone(392,0.30,'sine',0.04,262),180); break;  // descanso: suspiro
     case 'altar':   tone(523,0.15,'sine',0.07,784); setTimeout(()=>tone(659,0.15,'sine',0.06),120); setTimeout(()=>tone(784,0.25,'sine',0.06),240); break;  // altar: sanación
+
+    // ── SONIDOS DE INTERFAZ (botones, menús) ──
+    case 'uiTap':     tone2({freq:660, dur:0.04, wave:'square', vol:0.05, a:0.002, d:0.03, harm:0.1}); break;  // toque neutro
+    case 'uiConfirm': tone2({freq:587, dur:0.05, wave:'triangle', vol:0.06, a:0.003, d:0.04}); setTimeout(()=>tone2({freq:880, dur:0.08, wave:'triangle', vol:0.06, a:0.003, d:0.06}),55); break;  // aceptar: dos notas ascendentes
+    case 'uiCancel':  tone2({freq:440, dur:0.06, wave:'square', vol:0.055, a:0.002, d:0.05, toFreq:294}); break;  // cancelar: nota descendente
+    case 'uiClose':   tone2({freq:392, dur:0.07, wave:'sine', vol:0.05, a:0.003, d:0.06, toFreq:330}); break;  // cerrar: suave descendente
+    case 'uiOpen':    tone2({freq:392, dur:0.06, wave:'sine', vol:0.05, a:0.004, d:0.05, toFreq:523}); break;  // abrir: suave ascendente
+    case 'uiError':   tone2({freq:200, dur:0.10, wave:'sawtooth', vol:0.06, a:0.003, d:0.08}); setTimeout(()=>tone2({freq:180, dur:0.12, wave:'sawtooth', vol:0.06}),90); break;  // error: buzz grave doble
+    case 'uiTab':     tone2({freq:520, dur:0.035, wave:'triangle', vol:0.045, a:0.002, d:0.03, harm:0.1}); break;  // cambiar pestaña
+
+    // ── SONIDOS DE AMBIENTE (puntuales, sutiles) ──
+    case 'ambDrip':   tone2({freq:900+Math.random()*300, dur:0.12, wave:'sine', vol:0.035, a:0.002, d:0.10, toFreq:400}); break;  // goteo de caverna
+    case 'ambWind':   noise(0.8, 0.02, 500); break;  // ráfaga tenue
+    case 'ambCrystal':tone2({freq:1200, dur:0.3, wave:'sine', vol:0.025, a:0.05, d:0.25, harm:0.4}); break;  // tañido cristalino
+    case 'ambBone':   noise(0.06, 0.03, 800); setTimeout(()=>noise(0.04,0.02,1200),40); break;  // crujido de huesos
+
+    // ── COMBATE MEJORADO ──
+    case 'parry':     tone2({freq:1400, dur:0.08, wave:'square', vol:0.07, a:0.001, d:0.06, toFreq:2200}); noise(0.05,0.06,4000); break;  // chispa metálica
+    case 'victory':   chord([523,659,784], 0.4, 'triangle', 0.06); setTimeout(()=>tone2({freq:1046,dur:0.5,wave:'triangle',vol:0.07,a:0.01,d:0.4}),180); break;  // fanfarria de victoria
   }
 }
 // PISADA ORGÁNICA: dos contactos (talón grave, punta más aguda ~60ms después)
@@ -15482,6 +16589,93 @@ UI.toggleMusic=function(){
   if(typeof logMsg==='function') logMsg(next===0?'♫ Música en silencio.':'♫ Música al '+Math.round(next*100)+'%.','flavor');
 };
 
+// ═══ EFECTOS VISUALES: alterna iluminación + animación ambiental ═══
+// Un solo botón con 3 estados: ambos ON → solo luz (sin animación) → ambos OFF.
+// Útil si el equipo va lento (la animación repinta el mapa cada ~0,6 s).
+UI.toggleVisualFX=function(){
+  // estado actual → siguiente
+  if(LIGHT_ENABLED && AMBIENT_ANIM){        // ambos → quitar animación
+    AMBIENT_ANIM=false; LIGHT_ENABLED=true;
+    if(typeof stopAmbientAnim==='function') stopAmbientAnim();
+    if(typeof logMsg==='function') logMsg('✦ Animaciones desactivadas (la iluminación sigue).','flavor');
+  } else if(LIGHT_ENABLED && !AMBIENT_ANIM){ // solo luz → apagar todo
+    LIGHT_ENABLED=false; AMBIENT_ANIM=false;
+    if(typeof stopAmbientAnim==='function') stopAmbientAnim();
+    if(typeof logMsg==='function') logMsg('✦ Efectos visuales desactivados (mapa plano).','flavor');
+  } else {                                    // apagado → todo ON
+    LIGHT_ENABLED=true; AMBIENT_ANIM=true;
+    if(typeof startAmbientAnim==='function') startAmbientAnim();
+    if(typeof logMsg==='function') logMsg('✦ Iluminación y animaciones activadas.','flavor');
+  }
+  window.LIGHT_ENABLED=LIGHT_ENABLED;
+  if(G&&G.settings){ G.settings.lightFx=LIGHT_ENABLED; G.settings.animFx=AMBIENT_ANIM; }
+  _refreshFxBtn();
+  if(typeof renderMap==='function') renderMap();
+};
+function _refreshFxBtn(){
+  let btn=document.getElementById('fx-btn'); if(!btn)return;
+  let label = (LIGHT_ENABLED&&AMBIENT_ANIM)?'✦ LUZ':(LIGHT_ENABLED?'✦ LUZ·':'✦ OFF');
+  btn.textContent=label;
+  btn.style.opacity = LIGHT_ENABLED?'1':'0.5';
+}
+
+// ═══ AJUSTES: un solo panel con todo lo gráfico y de sonido ════════════════
+// Reúne en un modal las opciones que antes estaban dispersas en la barra de
+// título. Pensado para móvil (botones grandes) y también útil en escritorio.
+// Cada opción se explica y muestra su estado actual.
+UI.openSettings=function(){
+  if(!G) return;
+  G.settings = G.settings || {};
+  let s = G.settings;
+  function row(label, desc, valueTxt, action, on){
+    return '<div class="set-row" onclick="'+action+'">'+
+      '<div class="set-info"><div class="set-label">'+label+'</div>'+
+      '<div class="set-desc">'+desc+'</div></div>'+
+      '<div class="set-val '+(on?'on':'off')+'">'+valueTxt+'</div></div>';
+  }
+  function build(){
+    let volS = (s.sound===false)?0:(s.volume!=null?s.volume:1);
+    let volM = (s.music===false)?0:(s.musicVolume!=null?s.musicVolume:0.7);
+    let fxTxt = (LIGHT_ENABLED&&AMBIENT_ANIM)?'Completo':(LIGHT_ENABLED?'Solo luz':'Apagado');
+    let h='<div class="set-wrap">';
+    h+='<div class="set-sec">♪ SONIDO</div>';
+    h+=row('Efectos de sonido','Golpes, hechizos, pasos…', _volLabel(volS), 'UI._setCycleSound()', volS>0);
+    h+=row('Música','Ambiente y combate', _volLabel(volM), 'UI._setCycleMusic()', volM>0);
+    h+='<div class="set-sec">✦ GRÁFICOS</div>';
+    h+=row('Efectos visuales','Iluminación y animaciones del mapa', fxTxt, 'UI._setCycleFx()', LIGHT_ENABLED);
+    h+=row('Partículas','Cenizas, polvo, nieve según la zona', (AMBIENT_ANIM?'Sí':'No'), 'UI._setToggleParticles()', AMBIENT_ANIM);
+    h+=row('Filtro CRT','Líneas de barrido tipo monitor viejo', (document.body.classList.contains('noscan')?'No':'Sí'), 'UI._setToggleCrt()', !document.body.classList.contains('noscan'));
+    h+=row('Sacudida de pantalla','La cámara tiembla con los golpes', (s.shake===false?'No':'Sí'), 'UI._setToggleShake()', s.shake!==false);
+    h+='<div class="set-sec">▣ TÁCTIL</div>';
+    h+=row('Vibración','Respuesta táctil en combate (solo móvil)', (s.haptics===false?'No':'Sí'), 'UI._setToggleHaptics()', s.haptics!==false);
+    h+=row('Pistas de la guía','Consejos la primera vez que ocurre algo', (s.guide===false?'No':'Sí'), 'UI._setToggleGuide()', s.guide!==false);
+    h+='</div>';
+    return h;
+  }
+  openModal('⚙ AJUSTES', build(), [{label:'Cerrar',action:'close'}]);
+  UI._settingsRefresh=function(){
+    let host=document.getElementById('modal-body')||document.querySelector('#modal .modal-body');
+    if(host){ host.innerHTML=build(); }
+  };
+};
+// acciones del panel de ajustes (cada una aplica y refresca el panel)
+UI._setCycleSound=function(){ UI.toggleSound&&UI.toggleSound(); if(UI._settingsRefresh)UI._settingsRefresh(); };
+UI._setCycleMusic=function(){ UI.toggleMusic&&UI.toggleMusic(); if(UI._settingsRefresh)UI._settingsRefresh(); };
+UI._setCycleFx=function(){ UI.toggleVisualFX&&UI.toggleVisualFX(); if(UI._settingsRefresh)UI._settingsRefresh(); };
+UI._setToggleParticles=function(){
+  AMBIENT_ANIM=!AMBIENT_ANIM;
+  if(G&&G.settings) G.settings.animFx=AMBIENT_ANIM;
+  if(AMBIENT_ANIM){ if(typeof startAmbientAnim==='function')startAmbientAnim(); }
+  else { if(typeof stopAmbientAnim==='function')stopAmbientAnim(); }
+  if(typeof _refreshFxBtn==='function')_refreshFxBtn();
+  if(UI._settingsRefresh)UI._settingsRefresh();
+};
+UI._setToggleCrt=function(){ UI.toggleScan&&UI.toggleScan(); if(G&&G.settings)G.settings.crt=!document.body.classList.contains('noscan'); if(UI._settingsRefresh)UI._settingsRefresh(); };
+UI._setToggleShake=function(){ if(G&&G.settings)G.settings.shake=(G.settings.shake===false); if(UI._settingsRefresh)UI._settingsRefresh(); };
+UI._setToggleHaptics=function(){ if(G&&G.settings)G.settings.haptics=(G.settings.haptics===false); if((!G.settings||G.settings.haptics!==false)&&typeof haptic==='function')haptic(20); if(UI._settingsRefresh)UI._settingsRefresh(); };
+UI._setToggleGuide=function(){ UI.toggleGuide&&UI.toggleGuide(); if(UI._settingsRefresh)UI._settingsRefresh(); };
+window.UI=UI;
+
 // escalón de volumen compartido por ambos niveladores
 function _cycleVol(cur){
   if(cur>0.99)  return 0.75;
@@ -15508,7 +16702,11 @@ window._refreshSoundBtn=_refreshSoundBtn; window._refreshMusicBtn=_refreshMusicB
 // API pública que el motor de combate llama
 // vibración táctil (haptics) — funciona en el WebView de Android; se ignora en PC
 function haptic(ms){
-  try{ if(navigator.vibrate && (typeof isMobileLayout!=='function'||isMobileLayout())) navigator.vibrate(ms); }catch(e){}
+  // vibración táctil (solo móvil). Se puede desactivar en ajustes gráficos.
+  try{
+    if(G && G.settings && G.settings.haptics===false) return;
+    if(navigator.vibrate && (typeof isMobileLayout!=='function'||isMobileLayout())) navigator.vibrate(ms);
+  }catch(e){}
 }
 window.haptic=haptic;
 window.combatFX={
@@ -15520,8 +16718,14 @@ window.combatFX={
     let icon = '⚔ ';  // icono de ataque
     floatNumber(cbid, icon+(crit?'¡':'')+'-'+dmg+(crit?'!':''), crit?'crit':'hit', col);
     if(crit){ floatWord(cbid, '¡CRÍTICO!', '--amber-glow'); shakeViewport(true); }
-    else if(dmg>=12){ shakeViewport(false); }
-    haptic(crit?[0,30,20,30]:18); sfx(crit?'crit':'hit');
+    else if(dmg>=18){ shakeViewport(false); }
+    else if(dmg>=6){ shakeViewport('soft'); }   // golpe normal: vibración apenas perceptible
+    // vibración con patrón según la magnitud: crítico = triple golpe fuerte,
+    // recibir daño = doble seco, golpe normal = pulso corto. Da dinámica física.
+    if(crit) haptic([0,40,30,40,30,60]);
+    else if(isPlayerTarget) haptic(dmg>=15?[0,50,40,50]:[0,35,25,35]);
+    else haptic(dmg>=15?45:dmg>=6?28:16);
+    sfx(crit?'crit':'hit');
     // BANNER: mensaje claro de quién golpeó a quién y cuánto (comunicación directa)
     try{
       let cm = G.combat && G.combat.combatants[cbid];
@@ -15543,6 +16747,26 @@ window.combatFX={
     try{ let cm=G.combat&&G.combat.combatants[cbid]; combatBanner(cm&&cm.isPlayer?'¡Esquivas!':(cm?cm.name+' esquiva':'¡Esquiva!'),'block'); }catch(e){} },
   status(cbid, glyph){ floatNumber(cbid, glyph, 'hit'); },
   spell(cbid, colVar){ spellParticles(cbid, colVar); haptic(15); sfx('spell'); },
+  // efecto de magia elaborado, elegido según las características del hechizo
+  spellFX(cbid, spell, fromCbid){
+    let col = (spell&&spell.color) || '--cyan';
+    haptic(18); sfx('spell');
+    if(!spell){ spellExplosion(cbid, col); return; }
+    // por elemento / naturaleza del hechizo
+    let el = spell.element||'';
+    let isFire = /fuego|fire|igni|llama|calor/i.test(el+(spell.id||'')+(spell.name||''));
+    let isBolt = spell.projectile || /rayo|bolt|flecha|dardo|proyectil|lanza/i.test((spell.id||'')+(spell.name||''));
+    let isQuake= spell.push || /tierra|quake|golpe|impacto|roca|piedra|terremoto/i.test((spell.id||'')+(spell.name||''));
+    let isArea = spell.aoe || spell.radius || /onda|area|área|nova|expansi|círculo|anillo/i.test((spell.id||'')+(spell.name||''));
+    // SIEMPRE hay un estallido inmediato en el objetivo (visible aunque los
+    // efectos escalonados por temporizador tarden). Encima se añade el efecto
+    // específico según el tipo, para que cada escuela se sienta distinta.
+    spellExplosion(cbid, col);
+    if(isBolt && fromCbid!=null && fromCbid!==cbid){ spellBolt(fromCbid, cbid, col); }
+    else if(isQuake){ spellCrack(cbid, col); }
+    else if(isArea){ spellWave(cbid, col); }
+    else if(isFire){ spellExplosion(cbid, '--amber-glow'); }   // doble estallido cálido
+  },
   death(cbid){ deathAnim(cbid);
     try{ let cm=G.combat&&G.combat.combatants[cbid]; if(cm&&!cm.isPlayer) combatBanner('☠ '+cm.name+' cae derrotado','info'); }catch(e){} },
   word(cbid, text, col){ floatWord(cbid, text, col); },
@@ -15641,20 +16865,23 @@ function renderCombatActions(){
     }
     html+=`<span class="cmd" onclick="UI.cAttack()"><span class="key">A</span>tacar${ammoTag}</span>`;
   }
-  // habilidad o hechizo según clase
+  // HABILIDADES (Aliento) y HECHIZOS (Kros) — botones SEPARADOS.
+  // Cada botón aparece si el personaje conoce algo de ese tipo. Las habilidades
+  // son las que eligió al crear el personaje o aprendió después.
   {
-    let awakenedHybrid = G.player.magicAwakened && G.player.cls!=='magic';
-    if(awakenedHybrid){
-      if(G.player.skills&&G.player.skills.length)
-        html+=`<span class="cmd" onclick="G.combat.submenu='skills';renderCombatActions()"><span class="key">H</span>abilidad</span>`;
-      if(G.player.spells&&G.player.spells.length)
-        html+=`<span class="cmd" onclick="G.combat.submenu='spellsX';renderCombatActions()"><span class="key" style="color:var(--violet)">⌁</span>Hechizo</span>`;
-    } else {
-      let hasAbilities = classUsesMagic() ? G.player.spells.length>0 : (G.player.skills&&G.player.skills.length>0);
-      if(hasAbilities){
-        let label=classUsesMagic()?'<span class="key">H</span>echizo':'<span class="key">H</span>abilidad';
-        html+=`<span class="cmd" onclick="UI.cSkills()">${label}</span>`;
-      }
+    let _skl = (typeof availableSkills==='function') ? availableSkills(G.player) : (G.player.skills||[]);
+    let tieneSkills = _skl.length>0;
+    let tieneSpells = G.player.spells && G.player.spells.length>0;
+    let esMago = classUsesMagic();
+    // botón de HABILIDADES (Aliento)
+    if(tieneSkills){
+      html+=`<span class="cmd" onclick="G.combat.submenu='skills';renderCombatActions()"><span class="key">H</span>abilidad</span>`;
+    }
+    // botón de HECHIZOS (Kros) — solo si conoce hechizos
+    if(tieneSpells){
+      html+=`<span class="cmd" onclick="G.combat.submenu='spellsX';renderCombatActions()"><span class="key" style="color:var(--violet)">⌁</span>Hechizo</span>`;
+    } else if(esMago){
+      html+=`<span class="cmd disabled" title="No conoces hechizos aún. Apréndelos subiendo de nivel o con pergaminos."><span class="key" style="color:var(--violet)">⌁</span>Hechizo</span>`;
     }
   }
   let usable=G.player.inventory.filter(i=>{let cc=DATA.consumables.find(x=>x.id===i.id);return cc&&!cc.mat;});
@@ -15758,7 +16985,10 @@ function renderPartSubmenu(){
 
 function renderSkillSubmenu(){
   let html='<span class="c-violet small" style="margin-right:6px">▸ ';
-  let _showSpells = (G.combat.submenu==='spellsX') || (classUsesMagic() && G.player.cls==='magic');
+  // Qué mostrar depende del SUBMENÚ elegido, no de la clase: 'spellsX' = hechizos
+  // (Kros), 'skills' = habilidades (Aliento). Antes un mago que abría el submenú
+  // de habilidades veía hechizos igualmente, porque la condición miraba la clase.
+  let _showSpells = (G.combat.submenu==='spellsX');
   if(_showSpells){
     html+='Kros '+Math.floor(G.player.kros)+'/'+G.player.krosMax+' · Calor '+G.player.heat.toFixed(0)+'/'+G.player.us.toFixed(0)+':</span>';
     let pcbS=G.combat.combatants.find(x=>x.isPlayer);
@@ -15781,7 +17011,8 @@ function renderSkillSubmenu(){
     html+='Aliento '+(G.player.stamina||0)+'/'+(G.player.staminaMax||0)+':</span>';
     let pcbK=G.combat.combatants.find(x=>x.isPlayer);
     let enK=G.combat.combatants.filter(x=>x.isEnemy&&aliveCombatant(x));
-    for(let kid of (G.player.skills||[])){
+    let _skillList = (typeof availableSkills==='function') ? availableSkills(G.player) : (G.player.skills||[]);
+    for(let kid of _skillList){
       let sk=DATA.skills[kid]; if(!sk)continue;
       let can=(G.player.stamina||0)>=sk.cost;
       let [rn,rx]=rangeOfSkill(sk);
@@ -15888,10 +17119,23 @@ function renderMobileVitals(){
     return '<div class="mvb"><i style="width:'+pct+'%;background:'+fill+'"></i><b><span>'+label+'</span><span>'+txt+'</span></b></div>';
   }
   let h = bar('VIT', p.hp, p.hpMax, false, 30);
-  if(p.cls==='magic' || p.magicAwakened) h += bar('KRO', p.kros||0, p.krosMax||1, false, 20);
-  else h += bar('ALI', p.stamina||0, p.staminaMax||1, false, 20);
+  let _esMago = p.cls==='magic' || p.magicAwakened;
+  if(_esMago) h += bar('KRO', p.kros||0, p.krosMax||1, false, 20);
+  // El Aliento se muestra siempre que el personaje lo tenga (todos lo usan).
+  if((p.staminaMax||0)>0) h += bar('ALI', p.stamina||0, p.staminaMax||1, false, 20);
   h += bar('HAM', p.hunger||0, 100, true, 25);
   h += bar('SED', p.thirst||0, 100, true, 25);
+  // SUEÑO y LOCURA: antes faltaban en móvil; son estados críticos que el jugador
+  // necesita vigilar (dormirse o enloquecer tiene consecuencias graves).
+  h += bar('SUE', p.fatigue||0, 100, true, 15);
+  h += bar('LOC', p.madness||0, 100, true, 20);
+  // NIVEL + XP: para saber cuánto falta para subir de nivel, también en móvil.
+  {
+    let need = (typeof xpForLevel==='function') ? xpForLevel(p.level||1) : ((p.level||1)*100);
+    let cur = p.xp||0;
+    let pct = need>0 ? Math.max(0,Math.min(100, cur/need*100)) : 0;
+    h += '<div class="mvb mvb-xp" title="Experiencia — sube de nivel para ganar puntos"><i style="width:'+pct+'%;background:var(--amber-glow)"></i><b><span>Nv'+(p.level||1)+'</span><span>'+cur+'/'+need+'</span></b></div>';
+  }
   // ESQUIRLAS: en móvil el panel del Eco está oculto, así que el dinero
   // no se veía por ningún lado. Va aquí, siempre a la vista.
   h += '<div class="mvb mvb-coin" title="Esquirlas"><b><span>₱</span><span>'+(p.gold||0)+'</span></b></div>';
@@ -15909,9 +17153,24 @@ function updateUI(){
   if(!G._audioBtnsSynced){ G._audioBtnsSynced=true;
     if(typeof _refreshSoundBtn==='function') _refreshSoundBtn();
     if(typeof _refreshMusicBtn==='function') _refreshMusicBtn();
+    // restaurar preferencia de efectos visuales
+    if(G.settings){
+      if(G.settings.lightFx!==undefined) LIGHT_ENABLED=!!G.settings.lightFx;
+      if(G.settings.animFx!==undefined) AMBIENT_ANIM=!!G.settings.animFx;
+      window.LIGHT_ENABLED=LIGHT_ENABLED;
+      if(!AMBIENT_ANIM && typeof stopAmbientAnim==='function') stopAmbientAnim();
+    }
+    if(typeof _refreshFxBtn==='function') _refreshFxBtn();
   }
-  renderStatus();
-  renderInfoTabs();
+  // RENDIMIENTO MÓVIL: los paneles de estado e info están OCULTOS en móvil (se
+  // ven solo dentro de modales). Re-renderizarlos en cada paso es trabajo perdido
+  // que causaba lag al caminar. En móvil solo actualizamos las barras vitales,
+  // que sí están siempre a la vista. En escritorio se sigue actualizando todo.
+  let _mobUI = (typeof isMobileLayout==='function') && isMobileLayout();
+  if(!_mobUI){
+    renderStatus();
+    renderInfoTabs();
+  }
   if(typeof renderMobileVitals==='function') renderMobileVitals();
   // MÚSICA DE TENSIÓN: si la vida cruza la zona crítica, cambia el tema (con
   // histéresis para no parpadear en el borde). En combate no interviene: ya es tenso.
@@ -16112,7 +17371,38 @@ Game.openSlotSelect=function(){
         <div class="small c-dim" style="margin-top:2px">Ranura libre. Forja aquí un Eco nuevo.</div></div>`;
     }
   }
-  openModal('◈ RANURAS DE GUARDADO', html, [{label:'◂ Volver', action:'close'}]);
+  openModal('◈ RANURAS DE GUARDADO', html, [
+    {label:'▼ Importar partida', action:()=>Game.openImportPicker&&Game.openImportPicker()},
+    {label:'▲ Exportar partida', action:()=>Game.openExportPicker&&Game.openExportPicker()},
+    {label:'◂ Volver', action:'close'}
+  ]);
+};
+// selector de ranura para EXPORTAR (solo muestra las que tienen partida)
+Game.openExportPicker=function(){
+  let html='<div class="small c-dim mb">¿Qué ranura quieres exportar para llevártela a otro dispositivo?</div>';
+  let any=false;
+  for(let n=1;n<=3;n++){
+    let sum=slotSummary(n);
+    if(sum){ any=true;
+      html+='<div class="lrow" style="display:block;cursor:pointer" onclick="Game.openExport('+n+')">'+
+        '<div class="flex-between"><span class="nm c-amber">◈ RANURA '+n+'</span><span class="meta">EXPORTAR ▸</span></div>'+
+        '<div class="small c-dim" style="margin-top:2px">'+sum.name+' · nivel '+sum.level+' · prof. '+sum.depth+'</div></div>';
+    }
+  }
+  if(!any) html+='<div class="small c-dim">No hay partidas guardadas para exportar todavía.</div>';
+  openModal('▲ EXPORTAR — elegir ranura', html, [{label:'◂ Volver', action:()=>Game.openSlotSelect()}]);
+};
+// selector de ranura DESTINO para IMPORTAR
+Game.openImportPicker=function(){
+  let html='<div class="small c-dim mb">¿En qué ranura quieres colocar la partida importada? Si la ranura tiene datos, se reemplazarán.</div>';
+  for(let n=1;n<=3;n++){
+    let sum=slotSummary(n);
+    let estado = sum ? ('ocupada — '+sum.name+' nv'+sum.level) : 'vacía';
+    html+='<div class="lrow" style="display:block;cursor:pointer" onclick="Game.openImport('+n+')">'+
+      '<div class="flex-between"><span class="nm '+(sum?'c-amber':'c-dim')+'">◈ RANURA '+n+'</span><span class="meta">IMPORTAR AQUÍ ▸</span></div>'+
+      '<div class="small c-dim" style="margin-top:2px">'+estado+'</div></div>';
+  }
+  openModal('▼ IMPORTAR — elegir ranura destino', html, [{label:'◂ Volver', action:()=>Game.openSlotSelect()}]);
 };
 Game.enterSlot=function(n){ setActiveSlot(n); SAN=null; closeModal(); Game.loadGame(); };
 Game.newInSlot=function(n){ setActiveSlot(n); SAN=null; closeModal(); Game.newGameFlow(); };
@@ -16961,9 +18251,18 @@ Game.startNewGame=function(){
     if(bg.startPotion){ addToInventory({kind:'consumable',id:'pocion_curacion',qty:bg.startPotion}); }
     if(bg.startTool) addToInventory({kind:'weapon',id:bg.startTool,qty:1});
     if(player.cls==='ranged') addToInventory({kind:'consumable',id:'flecha',qty:20});
-    // VAGABUNDO: repertorio elegido + forma mágica
-    if(player.cls==='wander'){
-      player.skills=(CC.repertoire||[]).slice();
+    // REPERTORIO ELEGIDO: las habilidades de Aliento que el jugador escogió en la
+    // creación se asignan SIEMPRE, haya despertado magia o no. Antes esto vivía
+    // dentro de `if(cls==='wander')`, así que si elegías una forma de magia tu
+    // clase pasaba a 'magic' y TUS habilidades elegidas se perdían. En un juego de
+    // clase libre eso es un error: la magia es un complemento, no reemplaza tu
+    // repertorio físico.
+    if(CC.repertoire && CC.repertoire.length){
+      player.skills = player.skills || [];
+      for(let sid of CC.repertoire){ if(!player.skills.includes(sid)) player.skills.push(sid); }
+    }
+    // VAGABUNDO / cualquier Eco que canaliza: forma mágica y hechizos
+    if(player.cls==='wander' || player.magicAwakened || (CC.magicForm && CC.magicForm!=='none')){
       if(CC.magicForm && CC.magicForm!=='none'){
         player.magicAwakened=true;
         player.focus=CC.magicForm;
@@ -17165,11 +18464,17 @@ function assignStartingKit(player){
         .filter(id=>DATA.spells.some(s=>s.id===id));
       if(!player.spells.length) player.spells=['aguja_luminar','onda_presion'];
     }
-    player.skills=[];
+    // Las habilidades de Aliento que el jugador ELIGIÓ en la creación se
+    // conservan aunque haya despertado magia (clase libre: la magia complementa,
+    // no reemplaza el repertorio físico). Antes esto era `skills=[]` y borraba lo
+    // elegido, dejando al mago sin sus habilidades ni acceso al Aliento.
+    player.skills = (CC && CC.repertoire) ? CC.repertoire.slice() : [];
   } else {
-    // melee/ranged: 2 habilidades iniciales de su subclase
+    // melee/ranged: habilidades elegidas (repertorio) o, si no, las de su subclase
     let sub=DATA.subclasses[player.subclass];
-    player.skills = (sub&&sub.skills?sub.skills.slice(0,2):[]);
+    player.skills = (CC && CC.repertoire && CC.repertoire.length)
+                    ? CC.repertoire.slice()
+                    : (sub&&sub.skills?sub.skills.slice(0,2):[]);
     player.spells=[];
   }
 
@@ -17227,7 +18532,8 @@ function bindKeys(){
     else if(k==='r'){Game.rest();}
     else if(k==='f'){Game.search();}
     else if(k==='i'){UI.showTab('inv');}
-    else if(k==='c'){ if(G.player.cls==='magic'&&G.player.spells.length)UI.showTab('spells'); else if(G.player.skills&&G.player.skills.length)UI.showTab('spells'); }
+    else if(k==='c'){ let _s=(typeof availableSkills==='function')?availableSkills(G.player):(G.player.skills||[]); if((classUsesMagic()&&G.player.spells.length)||_s.length)UI.showTab('spells'); }
+    else if(k==='t'){ UI.showTab('tree'); }
     if(moved)e.preventDefault();
   });
 }
@@ -17240,7 +18546,7 @@ function handleCombatKey(k,e){
   // si hay un submenú abierto, no interceptar las teclas principales
   if(c.submenu||c.mode==='targeting')return;
   if(k==='a'){UI.cAttack();e.preventDefault();}
-  else if(k==='h'){ let has=classUsesMagic()?G.player.spells.length:(G.player.skills&&G.player.skills.length); if(has)UI.cSkills();e.preventDefault();}
+  else if(k==='h'){ G.combat.submenu='skills'; renderCombatActions(); e.preventDefault();}
   else if(k==='o'){UI.cItems();e.preventDefault();}
   else if(k==='d'){UI.cDefend();e.preventDefault();}
   else if(k==='n'){UI.cAnalyze();e.preventDefault();}
@@ -17664,6 +18970,281 @@ function slotSummary(n){
 }
 window.activeSlot=activeSlot; window.setActiveSlot=setActiveSlot; window.slotKey=slotKey; window.slotSummary=slotSummary;
 
+// ═══════════════════════════════════════════════════════════════════════
+//  EXPORTAR / IMPORTAR PARTIDAS — 100% sin conexión.
+//  Empaqueta TODO el estado de una ranura (partida, autosave, santuario,
+//  cementerio) MÁS la meta-progresión (logros, clases desbloqueadas) en un
+//  bloque de texto. El jugador lo pasa al otro dispositivo como quiera (archivo,
+//  correo propio, cable) y lo importa. No hay ni una sola conexión a terceros.
+// ═══════════════════════════════════════════════════════════════════════
+const _SAVE_MAGIC='AMSALOR-SAVE-v1';
+// codificación segura de texto UTF-8 ↔ base64 (soporta acentos y símbolos)
+function _b64encode(str){
+  try{
+    // codificar UTF-8 primero para no romper con acentos/glifos
+    let utf8 = unescape(encodeURIComponent(str));
+    if(typeof btoa==='function') return btoa(utf8);
+  }catch(e){}
+  return str;   // si btoa no existe, se guarda en claro (sigue funcionando)
+}
+function _b64decode(b64){
+  try{
+    if(typeof atob==='function'){ let utf8=atob(b64); return decodeURIComponent(escape(utf8)); }
+  }catch(e){}
+  return b64;
+}
+// reúne todas las claves de una ranura + la meta en un objeto
+function buildExportPackage(slot){
+  slot = slot || activeSlot();
+  let ls = safeStorage();
+  if(!ls) return null;
+  let bases=['amsalor_save','amsalor_autosave','amsalor_sanctuary','amsalor_graveyard'];
+  let data={};
+  for(let b of bases){
+    let v=null; try{ v=ls.getItem(b+'_'+slot); }catch(e){}
+    if(v!=null) data[b]=v;
+  }
+  // meta global (logros, contadores, clases desbloqueadas)
+  let meta=null; try{ meta=ls.getItem('amsalor_meta'); }catch(e){}
+  let pkg={
+    magic:_SAVE_MAGIC,
+    slot:slot,
+    exportedAt:Date.now(),
+    summary:slotSummary(slot),   // para mostrar qué es al importar
+    data:data,
+    meta:meta
+  };
+  return pkg;
+}
+// genera el texto exportable (base64 de un JSON)
+function exportSaveText(slot){
+  let pkg=buildExportPackage(slot);
+  if(!pkg) return null;
+  let json=JSON.stringify(pkg);
+  return _SAVE_MAGIC+':'+_b64encode(json);
+}
+// parsea un texto importado → objeto paquete (o null si no es válido)
+function parseImportText(text){
+  if(!text) return null;
+  text=(''+text).trim();
+  // aceptar con o sin el prefijo mágico
+  let payload=text;
+  if(text.indexOf(_SAVE_MAGIC+':')===0) payload=text.slice((_SAVE_MAGIC+':').length);
+  // intentar como base64 primero, luego como JSON en claro
+  let json=_b64decode(payload.trim());
+  let pkg=null;
+  try{ pkg=JSON.parse(json); }catch(e){
+    try{ pkg=JSON.parse(payload); }catch(e2){ return null; }
+  }
+  if(!pkg || pkg.magic!==_SAVE_MAGIC || !pkg.data) return null;
+  return pkg;
+}
+// escribe un paquete importado en una ranura destino
+function applyImportPackage(pkg, destSlot){
+  let ls=safeStorage();
+  if(!ls) return false;
+  destSlot = destSlot || pkg.slot || activeSlot();
+  try{
+    // limpiar la ranura destino antes de escribir
+    let bases=['amsalor_save','amsalor_autosave','amsalor_sanctuary','amsalor_graveyard'];
+    for(let b of bases){ try{ ls.removeItem(b+'_'+destSlot); }catch(e){} }
+    // escribir los datos de la ranura
+    for(let k in pkg.data){
+      if(pkg.data[k]!=null) ls.setItem(k+'_'+destSlot, pkg.data[k]);
+    }
+    // meta: FUSIONAR en vez de sobrescribir (para no perder logros locales).
+    if(pkg.meta){
+      try{
+        let incoming=JSON.parse(pkg.meta);
+        let current=null; try{ current=JSON.parse(ls.getItem('amsalor_meta')||'null'); }catch(e){}
+        if(!current){ ls.setItem('amsalor_meta', pkg.meta); }
+        else {
+          // fusión: logros y sets con OR; contadores con el máximo
+          let merged=Object.assign({}, current);
+          merged.ach=Object.assign({}, current.ach||{}, incoming.ach||{});
+          merged.endings=Object.assign({}, current.endings||{}, incoming.endings||{});
+          merged.spellsSeen=Object.assign({}, current.spellsSeen||{}, incoming.spellsSeen||{});
+          const nums=['kills','bossKills','maxDepth','crafted','moonKills','crits','spellsCast','spellsInPsi','overheats','harvested','spellsKnown','maxTurns'];
+          for(const n of nums){ merged[n]=Math.max(current[n]||0, incoming[n]||0); }
+          ls.setItem('amsalor_meta', JSON.stringify(merged));
+        }
+        // recargar META en memoria
+        if(typeof loadMeta==='function'){ META=loadMeta(); window.META=META; }
+      }catch(e){ /* si la meta falla, la partida igual se importa */ }
+    }
+    return true;
+  }catch(e){ return false; }
+}
+window.exportSaveText=exportSaveText; window.parseImportText=parseImportText;
+window.applyImportPackage=applyImportPackage; window.buildExportPackage=buildExportPackage;
+
+// ── DIÁLOGO: EXPORTAR una ranura ──
+Game.openExport=function(slot){
+  slot = slot || activeSlot();
+  let sum=slotSummary(slot);
+  if(!sum){
+    openModal('▲ EXPORTAR PARTIDA',
+      '<div class="small c-dim">La ranura '+slot+' está vacía. Elige una ranura con una partida para exportarla.</div>',
+      [{label:'◂ Volver', action:()=>Game.openSlotSelect&&Game.openSlotSelect()}]);
+    return;
+  }
+  let text=exportSaveText(slot);
+  if(!text){
+    openModal('▲ EXPORTAR PARTIDA',
+      '<div class="small c-red">No se pudo leer la partida (¿almacenamiento bloqueado? Abre el archivo con doble clic).</div>',
+      [{label:'◂ Volver', action:'close'}]);
+    return;
+  }
+  // Descarga directa del archivo .txt. Es el flujo principal: un archivo que
+  // luego se carga en el otro dispositivo para importar.
+  let html='<div class="small c-dim" style="line-height:1.7">'+
+    'Partida: <span class="c-amber">'+sum.name+'</span> · nivel '+sum.level+' · prof. '+sum.depth+'<br><br>'+
+    'Se descargará un archivo <span class="c-amber">.txt</span> con toda tu partida y tus logros. '+
+    'Pásalo al otro dispositivo (cable, tu propio correo, lo que sea) y usa <b>Importar</b> allí para cargarlo. '+
+    'Todo local, sin conexión a internet.</div>';
+  openModal('▲ EXPORTAR PARTIDA — Ranura '+slot, html, [
+    {label:'⬇ Descargar archivo de partida', action:()=>Game.downloadSave(slot)},
+    {label:'Cerrar', action:'close'}
+  ]);
+};
+
+// descargar la partida como archivo .txt (sin servidor: usa un Blob local)
+Game.downloadSave=function(slot){
+  slot=slot||activeSlot();
+  let text=exportSaveText(slot);
+  if(!text){ logMsg('No se pudo generar el archivo.','bad'); return; }
+  try{
+    let sum=slotSummary(slot)||{name:'partida'};
+    let safeName=(''+sum.name).replace(/[^a-zA-Z0-9]/g,'_').slice(0,20)||'partida';
+    let fecha=new Date().toISOString().slice(0,10);
+    let fname='AMSALOR_'+safeName+'_'+fecha+'.txt';
+    let blob=new Blob([text],{type:'text/plain'});
+    let url=URL.createObjectURL(blob);
+    let a=document.createElement('a');
+    a.href=url; a.download=fname;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ try{ document.body.removeChild(a); URL.revokeObjectURL(url); }catch(e){} }, 100);
+    // confirmar en un modal, con respaldo por si la descarga no se disparó
+    openModal('⬇ ARCHIVO GENERADO',
+      '<div class="small" style="line-height:1.7">Se descargó <span class="c-amber">'+fname+'</span>.<br>'+
+      'Búscalo en tu carpeta de descargas y pásalo al otro dispositivo.<br><br>'+
+      '<span class="c-dim">Si tu navegador no descargó nada (algunos móviles lo bloquean), toca «Ver código» para copiarlo a mano.</span></div>',
+      [{label:'Listo', action:'close'},
+       {label:'Ver código (respaldo)', action:()=>Game.showExportText(slot)}]);
+    logMsg('⬇ Archivo «'+fname+'» descargado.','sys');
+  }catch(e){
+    // si el Blob/descarga falla, caemos al código de texto directamente
+    Game.showExportText(slot);
+  }
+};
+
+// respaldo: mostrar el código en texto para copiar a mano (solo si la descarga falla)
+Game.showExportText=function(slot){
+  slot=slot||activeSlot();
+  let text=exportSaveText(slot);
+  if(!text){ logMsg('No se pudo generar el código.','bad'); return; }
+  let html='<div class="small c-dim mb">Copia TODO este código y pégalo al importar en el otro dispositivo:</div>'+
+    '<textarea id="export-box" readonly style="width:100%;height:130px;box-sizing:border-box;'+
+    'background:#0a0a0a;color:var(--ink);border:1px solid var(--line-bright);'+
+    'font-family:monospace;font-size:11px;padding:8px;resize:vertical;white-space:pre-wrap;word-break:break-all">'+
+    text+'</textarea>';
+  openModal('▲ CÓDIGO DE PARTIDA (respaldo)', html, [
+    {label:'⧉ Copiar', action:()=>{
+      try{
+        let ta=document.getElementById('export-box');
+        ta.focus(); ta.select();
+        let ok=false;
+        try{ ok=document.execCommand('copy'); }catch(e){}
+        if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).catch(()=>{}); ok=true; }
+        logMsg(ok?'▲ Código copiado.':'Selecciona el texto y cópialo manualmente.', ok?'sys':'flavor');
+      }catch(e){ logMsg('Selecciona el texto y cópialo manualmente.','flavor'); }
+    }},
+    {label:'Cerrar', action:'close'}
+  ]);
+};
+
+// ── DIÁLOGO: IMPORTAR a una ranura ──
+Game.openImport=function(destSlot){
+  destSlot = destSlot || activeSlot();
+  let html='<div class="small c-dim mb" style="line-height:1.6">'+
+    'Carga el archivo <span class="c-amber">.txt</span> de partida que descargaste en el otro dispositivo. '+
+    'Se leerá y se colocará en la <b>ranura '+destSlot+'</b> (lo que haya ahí se reemplaza). Tus logros se combinan, no se pierden.</div>'+
+    '<div style="border:1px dashed var(--line-bright);border-radius:6px;padding:14px;text-align:center;background:#0a0a0a">'+
+      '<div class="c-amber small mb">⬆ Selecciona el archivo de partida</div>'+
+      '<input type="file" id="import-file" accept=".txt,text/plain" style="width:100%;font-size:12px;color:var(--ink)">'+
+    '</div>'+
+    '<div id="import-status" class="small" style="margin-top:8px;min-height:16px"></div>'+
+    '<div class="small c-dim" style="margin-top:10px;cursor:pointer;text-decoration:underline" '+
+      'onclick="var b=document.getElementById(\'import-paste-wrap\'); if(b) b.style.display=(b.style.display===\'none\'?\'block\':\'none\')">'+
+      '¿No puedes cargar el archivo? Pegar el código a mano ▾</div>'+
+    '<div id="import-paste-wrap" style="display:none;margin-top:6px">'+
+      '<textarea id="import-box" placeholder="…pega aquí el código de partida…" style="width:100%;height:90px;box-sizing:border-box;'+
+      'background:#0a0a0a;color:var(--ink);border:1px solid var(--line-bright);'+
+      'font-family:monospace;font-size:11px;padding:8px;resize:vertical;white-space:pre-wrap;word-break:break-all"></textarea>'+
+      '<div style="text-align:right;margin-top:4px"><span class="cmd" onclick="Game.doImport('+destSlot+')">✓ Importar código pegado</span></div>'+
+    '</div>';
+  openModal('▼ IMPORTAR PARTIDA — Ranura '+destSlot, html, [
+    {label:'Cancelar', action:'close'}
+  ]);
+  // al elegir un archivo, se lee y se IMPORTA automáticamente
+  setTimeout(()=>{
+    let fi=document.getElementById('import-file');
+    if(fi){ fi.onchange=function(){
+      let f=fi.files&&fi.files[0]; if(!f)return;
+      let st=document.getElementById('import-status');
+      if(st){ st.textContent='Leyendo «'+f.name+'»…'; st.style.color=getCssVar('--ink-dim'); }
+      let rd=new FileReader();
+      rd.onload=function(){
+        // volcar al textarea (por si el usuario quiere revisar) y disparar la importación
+        let ta=document.getElementById('import-box'); if(ta) ta.value=rd.result;
+        Game.doImportFromText(rd.result, destSlot);
+      };
+      rd.onerror=function(){ if(st){ st.textContent='✗ No se pudo leer el archivo.'; st.style.color=getCssVar('--red'); } };
+      rd.readAsText(f);
+    }; }
+  }, 0);
+};
+
+// importa desde el textarea (código pegado a mano)
+Game.doImport=function(destSlot){
+  destSlot=destSlot||activeSlot();
+  let ta=document.getElementById('import-box');
+  Game.doImportFromText(ta?ta.value:'', destSlot);
+};
+
+// núcleo de importación: recibe el texto (de archivo o pegado), valida y confirma
+Game.doImportFromText=function(text, destSlot){
+  destSlot=destSlot||activeSlot();
+  let st=document.getElementById('import-status');
+  let setStatus=(msg,col)=>{ if(st){ st.textContent=msg; st.style.color=getCssVar(col||'--ink-dim'); } };
+  if(!text||!text.trim()){ setStatus('Carga un archivo o pega un código primero.','--red'); return; }
+  let pkg=parseImportText(text);
+  if(!pkg){ setStatus('✗ El archivo o código no es válido o está incompleto.','--red'); return; }
+  // confirmar, mostrando qué partida es
+  let sum=pkg.summary||{};
+  let desc = sum.name ? (sum.name+' · nivel '+(sum.level||'?')+' · prof. '+(sum.depth||0)) : 'partida';
+  let confirmHtml='<div class="small mb">Se leyó correctamente esta partida:</div>'+
+    '<div class="c-amber mb">◈ '+desc+'</div>'+
+    '<div class="small c-dim">Se colocará en la <b>ranura '+destSlot+'</b>. Si esa ranura ya tiene una partida, se reemplazará. Tus logros de este dispositivo se conservan y se combinan con los importados.</div>';
+  openModal('▼ CONFIRMAR IMPORTACIÓN', confirmHtml, [
+    {label:'✓ Sí, importar aquí', action:()=>{
+      let ok=applyImportPackage(pkg, destSlot);
+      if(ok){
+        setActiveSlot(destSlot);
+        openModal('▼ PARTIDA IMPORTADA',
+          '<div class="small" style="line-height:1.6">La partida <span class="c-amber">'+desc+'</span> se importó en la ranura '+destSlot+'.<br>Pulsa continuar para entrar en ella.</div>',
+          [{label:'▸ Jugar esta partida', action:()=>{ closeModal(); SAN=null; Game.loadGame(); }},
+           {label:'Volver al menú', action:()=>Game.openSlotSelect&&Game.openSlotSelect()}]);
+      } else {
+        openModal('✗ ERROR AL IMPORTAR',
+          '<div class="small c-red">No se pudo escribir la partida (¿almacenamiento bloqueado? Abre el archivo con doble clic para habilitarlo).</div>',
+          [{label:'◂ Volver', action:()=>Game.openImport(destSlot)}]);
+      }
+    }},
+    {label:'◂ Volver', action:()=>Game.openImport(destSlot)}
+  ]);
+};
+
 Game.saveGame=function(force){
   if(!G||!G.player){return;}
   // Solo se puede guardar junto a la hoguera del santuario
@@ -17683,7 +19264,7 @@ Game.saveGame=function(force){
       cycle:G.cycle, flags:G.flags,
       player:serializePlayer(G.player),
       // store map seed-less: just re-gen on load is complex; save full map lightweight
-      mapTiles:G.map.tiles, mapFloors:G.map.floors, mapW:G.map.w, mapH:G.map.h,
+      mapTiles:G.map.tiles, mapFloors:G.map.floors, mapW:G.map.w, mapH:G.map.h, mapDeco:G.map.deco, mapBiome:G.map.biome,
       px:G.player.x, py:G.player.y,
       enemies:G.enemies.map(e=>({id:e.id,x:e.x,y:e.y,hp:e.hp,hpMax:e.hpMax,alive:e.alive,aggro:e.aggro,statuses:e.statuses,ally:e.ally})),
       items:G.items, features:G.features, seen:G.seen,
@@ -17716,7 +19297,7 @@ Game._autoSaveNow=function(){
       depth:G.depth, turn:G.turn, gold:G.player.gold, incursion:G.incursion||null,
       cycle:G.cycle, flags:G.flags,
       player:serializePlayer(G.player),
-      mapTiles:G.map.tiles, mapFloors:G.map.floors, mapW:G.map.w, mapH:G.map.h,
+      mapTiles:G.map.tiles, mapFloors:G.map.floors, mapW:G.map.w, mapH:G.map.h, mapDeco:G.map.deco, mapBiome:G.map.biome,
       px:G.player.x, py:G.player.y,
       enemies:G.enemies.map(e=>({id:e.id,x:e.x,y:e.y,hp:e.hp,hpMax:e.hpMax,alive:e.alive,aggro:e.aggro,statuses:e.statuses,ally:e.ally})),
       items:G.items, features:G.features, seen:G.seen,
@@ -17801,7 +19382,7 @@ Game.loadGame=function(){
     G.player=p;
     p.recalc();
     // rebuild map
-    G.map={tiles:s.mapTiles,floors:s.mapFloors,w:s.mapW,h:s.mapH,grid:null};
+    G.map={tiles:s.mapTiles,floors:s.mapFloors,w:s.mapW,h:s.mapH,grid:null,deco:s.mapDeco||null,biome:s.mapBiome||null};
     G.seen=s.seen||{};
     G.features=s.features||[];
     G.items=s.items||[];
@@ -18137,14 +19718,27 @@ UI.openMobilePanel=function(which){
     if(host) host.scrollTop=host.scrollHeight;
     return;
   }
-  // tabs de info (inv, spells, equip, craft, lore)
-  let titles={inv:'INVENTARIO', spells:(p_usesMagic()?'HECHIZOS':'HABILIDADES'), equip:'EQUIPO', craft:'CRAFTEO', lore:'BESTIARIO'};
+  // tabs de info (inv, spells, tree, equip, craft, lore)
+  let titles={inv:'INVENTARIO', spells:(classUsesMagic()?'HECHIZOS':'HABILIDADES'), tree:'ÁRBOL DE HABILIDADES', equip:'EQUIPO', craft:'CRAFTEO', lore:'BESTIARIO'};
   openModal(titles[which]||'', '<div id="mobile-info-host"></div>', [{label:'Cerrar',action:'close'}]);
   currentTab=which;
   renderInfoBody();
   let src=document.getElementById('info-body');
   let host=document.getElementById('mobile-info-host');
   if(src&&host) host.innerHTML=src.innerHTML;
+  // el árbol y el inventario tienen botones que cambian estado (gastar puntos,
+  // equipar, usar objetos): tras pulsarlos hay que re-sincronizar el modal con el
+  // panel real. Un observador simple: al hacer clic dentro del modal, recopiar.
+  if(host && (which==='tree'||which==='inv'||which==='equip'||which==='craft'||which==='spells')){
+    host.addEventListener('click', function(){
+      setTimeout(()=>{
+        if(typeof renderInfoBody==='function'){ renderInfoBody(); }
+        let s2=document.getElementById('info-body');
+        if(s2 && host) host.innerHTML=s2.innerHTML;
+        if(typeof renderMobileVitals==='function') renderMobileVitals();
+      }, 0);
+    });
+  }
 };
 
 function p_usesMagic(){ return G&&G.player&&G.player.cls==='magic'; }
