@@ -299,13 +299,18 @@ body.noscan::after{display:none}
    altura de 21px fija hacía que las filas se solaparan (muros montándose sobre
    los pasillos). Con line-height:1 y height:auto, la fila mide justo lo que la
    fuente, sea cual sea el zoom. */
-#viewport .vp-row{display:block;height:auto;line-height:1.25;white-space:nowrap}
+/* La grilla del mapa: cada celda es un span de ancho y alto EXACTAMENTE iguales,
+   y la fila usa el mismo line-height. Un único valor coherente (1.0) evita que
+   los muros se monten sobre los pasillos al cambiar el zoom. NO se usan márgenes
+   ni alturas en px que se descoordinen cuando la fuente crece. */
+#viewport .vp-row{display:block;height:1em;line-height:1;white-space:nowrap;margin:0;padding:0}
 #viewport{line-height:1}
 /* ═══ COMBATE EN 3 ZONAS: eje fijo arriba · lista con scroll · TÚ fijo abajo ═══
    Antes todo era una sola columna y tu bloque quedaba al final, fuera de la
    pantalla en cuanto había varios enemigos y aliados. */
 #viewport.combat-mode{display:flex;flex-direction:column;overflow:hidden}
 .cb-axis{flex:0 0 auto;padding-bottom:4px}
+.cb-atk{font-size:11px;letter-spacing:0.3px;font-weight:bold}
 .cb-list{
   flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;
   padding-right:4px;
@@ -343,20 +348,24 @@ body.noscan::after{display:none}
   width:auto;height:auto;line-height:normal;overflow:visible;display:inline-block;vertical-align:baseline
 }
 /* la barra de vida conserva su ancho propio, solo se libera su altura */
-#viewport .cb-list .hpbar-wrap, #viewport .cb-self .hpbar-wrap{height:9px;overflow:visible}
+#viewport .cb-list .hpbar-wrap, #viewport .cb-self .hpbar-wrap{height:14px;overflow:hidden}
 #viewport .cb-list .vp-row, #viewport .cb-self .vp-row{white-space:normal}
 /* FIX Android: glifos Unicode de ancho variable rompían la alineación
    de columnas ("mapa mal generado"). Cada celda mide exactamente 1ch de ancho.
    La altura es 1.25em (algo más que la fuente) para que glifos altos como ▓, ♦
    o los sprites de criaturas quepan ENTEROS sin recortarse; line-height igual a
    la altura los centra verticalmente y evita que las filas se superpongan. */
-#viewport .vp-row span{display:inline-block;width:1ch;height:1.25em;line-height:1.25em;overflow:visible;text-align:center;vertical-align:top}
+#viewport .vp-row span{display:inline-block;width:1ch;height:1em;line-height:1em;overflow:visible;text-align:center;vertical-align:top}
 
 /* log / message panel */
 /* ===== FEEDBACK VISUAL DE COMBATE ===== */
-.hpbar-wrap{display:inline-block;width:150px;height:9px;background:#0a0a0a;border:1px solid var(--line);
-  vertical-align:middle;overflow:hidden;border-radius:1px}
-.hpbar-fill{display:block;height:100%;transition:width .35s ease-out,background .35s ease-out}
+.hpbar-wrap{display:inline-block;width:150px;height:13px;background:#000;border:1px solid var(--line-bright);
+  vertical-align:middle;overflow:hidden;border-radius:2px;box-shadow:inset 0 0 3px rgba(0,0,0,0.8)}
+.hpbar-fill{display:block;height:100%;transition:width .35s ease-out,background .35s ease-out;
+  filter:brightness(1.15) saturate(1.2);position:relative}
+/* brillo sutil sobre la barra para que "lea" como barra de vida y no como línea */
+.hpbar-fill::after{content:'';position:absolute;top:0;left:0;right:0;height:45%;
+  background:linear-gradient(rgba(255,255,255,0.28),transparent);pointer-events:none}
 .st-row{display:inline-flex;gap:3px;margin-left:6px;vertical-align:middle}
 .st-chip{display:inline-block;font-size:11px;padding:0 3px;border:1px solid;border-radius:2px;
   line-height:1.3;background:#0d0d0d}
@@ -425,7 +434,13 @@ body.noscan::after{display:none}
 /* ===== EJE TÁCTICO DE DISTANCIA (combate) ===== */
 .dist-wrap{display:block;margin:2px 10px 10px}
 .dist-track{position:relative;height:52px;border:1px solid var(--line-bright);background:#0c0c0c;overflow:hidden}
-.dist-track .dr{position:absolute;top:0;bottom:0;background:rgba(255,190,80,.14);border-left:1px solid var(--amber);border-right:1px solid var(--amber);pointer-events:none}
+.dist-track .dr{position:absolute;top:0;bottom:0;background:rgba(255,190,80,.14);border-left:1px solid var(--amber);border-right:1px solid var(--amber);pointer-events:none;z-index:1}
+/* zona de amenaza enemiga: franja tenue del color según su tipo de ataque.
+   Usamos el color en el borde superior (con text-shadow-like glow) y un fondo
+   muy sutil; sin color-mix para máxima compatibilidad en WebViews antiguos. */
+.dist-track .dr-threat{position:absolute;top:0;bottom:0;pointer-events:none;
+  background:var(--tc);opacity:0.12;border-top:2px solid var(--tc);z-index:0}
+.dist-track .dr-threat::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--tc);opacity:0.6}
 .dist-track .dt{position:absolute;top:0;bottom:0;width:1px;background:var(--line);opacity:0.4}
 .dist-track .di{position:absolute;transform:translateX(-50%);font-weight:bold;font-size:15px;text-shadow:0 0 4px #000,0 0 2px #000;transition:left .2s ease-out}
 .dist-track .di.pl{color:var(--amber-glow);z-index:3}
@@ -884,9 +899,11 @@ body.noscan::after{display:none}
 
   /* ===== EL MAPA DOMINA: ocupa todo el espacio flexible ===== */
   #viewport-panel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
-  #viewport{flex:1 1 auto;min-height:0;font-size:15px;line-height:1.05;
+  #viewport{flex:1 1 auto;min-height:0;font-size:15px;line-height:1;
     display:flex;flex-direction:column;justify-content:center;overflow:hidden}
-  #viewport .vp-row{height:auto;flex-shrink:0}
+  /* las filas del mapa: altura = 1em exacta, sin margen, para grilla perfecta.
+     (el centrado vertical lo da justify-content del contenedor) */
+  #viewport:not(.combat-mode) .vp-row{height:1em;line-height:1;margin:0;flex-shrink:0}
 
   /* paneles de personaje e info: ocultos (se abren como modal) */
   #status-panel{display:none}
@@ -968,13 +985,14 @@ body.noscan::after{display:none}
   #cmdbar > .cmd.danger{ grid-column:1 / -1; }
   #cmdbar > span.blink{ grid-column:1 / -1; text-align:center; }
   /* barras de recursos del combate: más altas y legibles */
-  .hpbar-wrap{width:120px;height:11px}
+  .hpbar-wrap{width:120px;height:15px}
   .st-chip{font-size:12px;padding:1px 4px}
   .st-row{gap:4px}
   /* números flotantes de daño un poco más grandes en móvil */
   #combat-fx-layer div{font-size:16px !important}
-  /* el viewport de combate con más aire entre combatientes */
-  #viewport .vp-row{line-height:1.4 !important;margin-bottom:2px}
+  /* el viewport de COMBATE con más aire entre combatientes (NO el mapa de
+     exploración: ahí las filas deben quedar pegadas para formar la grilla) */
+  #viewport.combat-mode .cb-list .vp-row, #viewport.combat-mode .cb-self .vp-row{line-height:1.4 !important;margin-bottom:2px}
 
   /* ═══ COMBATE EN MÓVIL: sin superposiciones ═══
      El viewport de exploración centra su contenido (justify-content:center),
@@ -1003,7 +1021,7 @@ body.noscan::after{display:none}
     max-height:40%;overflow-y:auto;
   }
   /* barras del jugador más estrechas en móvil para que quepan sin desbordar */
-  #viewport.combat-mode .cb-self .hpbar-wrap{width:110px;height:11px}
+  #viewport.combat-mode .cb-self .hpbar-wrap{width:110px;height:15px}
   #viewport.combat-mode .cb-self .cb-resbar{width:64px;height:11px}
   #viewport.combat-mode .cb-self-name{font-size:13px}
   #viewport.combat-mode .cb-res-row{gap:4px 10px}
@@ -1475,6 +1493,27 @@ DATA.bestiary = [
    ai:"boss", loot:["corazon_nocturnis","fragmento_nuhlath","esencia_vacio"],
    traits:["phaseStep","drainKros","summonWall","castVoid"],
    boss:true, attack:"despliega la Anti-Magia: la negación absoluta del ser"},
+
+  // ═══ JEFES DE ÉLITE (fondo de zona, piso 5) ═══
+  // Aparecen custodiando el fondo de cada incursión. Más duros que un elite
+  // normal, con buenas recompensas. Marcados con eliteBoss:true.
+  {id:"tejedor_hueso", name:"Tejedor de Hueso", glyph:"Ψ", color:"--amber-glow", tier:4, boss:true, eliteBoss:true,
+   hp:[180,230], dmg:[18,28], speed:2, range:2, xp:420, psi:0.7, armor:7, resist:{poison:0.5},
+   desc:"Un magócarne que cose esbirros con los muertos de sus víctimas. Su telar nunca descansa.",
+   ai:"boss", loot:["opn_m_cristal","corazon_umbra","nucleo_glial","esencia_vacio"],
+   traits:["summonWall","castConfuse"], attack:"lanza agujas de hueso que cosen tu carne"},
+
+  {id:"senor_brasa", name:"Señor de la Brasa Eterna", glyph:"Φ", color:"--red-bright", tier:4, boss:true, eliteBoss:true,
+   hp:[200,260], dmg:[22,32], speed:2, range:3, xp:450, psi:0.6, armor:6, resist:{fuego:0.7},
+   desc:"Ardió en la Guerra de las Casas y nunca terminó de apagarse. Cada latido escupe fuego.",
+   ai:"boss", loot:["corazon_nocturnis","luminar_polvo","opn_m_cristal","fragmento_nuhlath"],
+   traits:["castBurn","drainKros"], attack:"desata una marea de fuego líquido"},
+
+  {id:"vigia_abismo", name:"Vigía del Abismo", glyph:"Θ", color:"--violet-bright", tier:4, boss:true, eliteBoss:true,
+   hp:[220,280], dmg:[20,30], speed:3, range:5, xp:480, psi:0.1, drains:true, armor:8,
+   desc:"Un ojo que el Vacío dejó vigilando la profundidad. Ve tu función de onda antes de que decidas.",
+   ai:"boss", loot:["corazon_nocturnis","esencia_vacio","fragmento_nuhlath","cristal_bismuto"],
+   traits:["phaseStep","drainKros","castVoid"], attack:"colapsa la realidad a tu alrededor"},
 
   // --- fauna aliada (Ecolalia summon) ---
   {id:"lobo_vorn", name:"Lobo de Vórn", glyph:"d", color:"--green", tier:1, ally:true,
@@ -2386,38 +2425,51 @@ DATA.backgrounds = {
 //  El jugador elige UNA virtud y UN defecto. Se compensan.
 // ============================================================
 DATA.virtues = {
-  valiente:{ id:"valiente", name:"Valiente", desc:"+15% de daño cuando tu vida está por debajo del 40%.", icon:"❤" },
+  valiente:{ id:"valiente", name:"Valiente", desc:"+18% de daño cuando tu vida está por debajo del 40%.", icon:"❤" },
   astuto:{ id:"astuto", name:"Astuto", desc:"+8% de probabilidad de crítico.", icon:"✦" },
   disciplinado:{ id:"disciplinado", name:"Disciplinado", desc:"−15% de coste de Kros/Aliento en tus habilidades.", icon:"◈" },
-  resistente:{ id:"resistente", name:"Resistente", desc:"+12% de vida máxima.", icon:"⛊" },
-  agil:{ id:"agil", name:"Ágil", desc:"+6% de evasión.", icon:"➶" },
+  resistente:{ id:"resistente", name:"Resistente", desc:"+15% de vida máxima.", icon:"⛊" },
+  agil:{ id:"agil", name:"Ágil", desc:"+7% de evasión.", icon:"➶" },
   afortunado:{ id:"afortunado", name:"Afortunado", desc:"+25% de botín y mejores hallazgos.", icon:"✧" },
-  // — nuevos (sistema de mods) —
-  sanguineo:{ id:"sanguineo", name:"Sanguíneo", desc:"Las curaciones que recibes rinden +12%.", icon:"✚", mods:{healRecvMult:1.12} },
-  templado:{ id:"templado", name:"Templado", desc:"Los estados negativos te duran 20% menos.", icon:"❄", mods:{statusDurMult:0.8} },
-  vigoroso:{ id:"vigoroso", name:"Vigoroso", desc:"+6 de Aliento máximo.", icon:"♦", mods:{staminaAdd:6} },
-  canalizador:{ id:"canalizador", name:"Canalizador", desc:"+10% de Kros máximo.", icon:"⌁", mods:{krosMult:1.10} },
+  // — mods —
+  sanguineo:{ id:"sanguineo", name:"Sanguíneo", desc:"Las curaciones que recibes rinden +15%.", icon:"✚", mods:{healRecvMult:1.15} },
+  templado:{ id:"templado", name:"Templado", desc:"Los estados negativos te duran 25% menos.", icon:"❄", mods:{statusDurMult:0.75} },
+  vigoroso:{ id:"vigoroso", name:"Vigoroso", desc:"+8 de Aliento máximo.", icon:"♦", mods:{staminaAdd:8} },
+  canalizador:{ id:"canalizador", name:"Canalizador", desc:"+12% de Kros máximo.", icon:"⌁", mods:{krosMult:1.12} },
   curtido:{ id:"curtido", name:"Curtido", desc:"+1 de armadura natural.", icon:"▣", mods:{armorAdd:1} },
   frugal:{ id:"frugal", name:"Frugal", desc:"El hambre y la sed suben 25% más lento.", icon:"◌", mods:{hungerMult:0.75, thirstMult:0.75} },
   sereno:{ id:"sereno", name:"Sereno", desc:"La locura crece 30% más lento.", icon:"҉", mods:{madnessMult:0.7} },
-  metodico:{ id:"metodico", name:"Metódico", desc:"Tu equipo se desgasta 30% menos.", icon:"⚒", mods:{durMult:0.7} }
+  metodico:{ id:"metodico", name:"Metódico", desc:"Tu equipo se desgasta 30% menos.", icon:"⚒", mods:{durMult:0.7} },
+  // — nuevos —
+  fornido:{ id:"fornido", name:"Fornido", desc:"Cargas más peso sin penalización: +6 de capacidad.", icon:"⊞", mods:{carryAdd:6} },
+  veloz:{ id:"veloz", name:"Veloz", desc:"+2 de iniciativa: actúas antes en combate.", icon:"⏵", mods:{initAdd:2} },
+  certero:{ id:"certero", name:"Certero", desc:"+8% de precisión con cualquier arma.", icon:"⌖", mods:{accAdd:0.08} },
+  regenerativo:{ id:"regenerativo", name:"Regenerativo", desc:"Recuperas 1 de vida cada pocos pasos al explorar.", icon:"✜", mods:{regenExplore:1} },
+  ferreo:{ id:"ferreo", name:"Férreo", desc:"−10% de daño físico recibido.", icon:"◈", mods:{physResistAdd:0.10} },
+  lucido:{ id:"lucido", name:"Lúcido", desc:"+10% de Kros máximo y la locura crece 15% más lento.", icon:"☼", mods:{krosMult:1.10, madnessMult:0.85} }
 };
 DATA.flaws = {
-  iracundo:{ id:"iracundo", name:"Iracundo", desc:"Recibes +10% de daño (atacas sin medir el riesgo).", icon:"☄" },
-  fragil:{ id:"fragil", name:"Frágil", desc:"−8% de vida máxima.", icon:"☓" },
+  iracundo:{ id:"iracundo", name:"Iracundo", desc:"Recibes +12% de daño (atacas sin medir el riesgo).", icon:"☄" },
+  fragil:{ id:"fragil", name:"Frágil", desc:"−15% de vida máxima.", icon:"☓" },
   lento:{ id:"lento", name:"Lento", desc:"−2 de iniciativa en combate.", icon:"⏃" },
-  derrochador:{ id:"derrochador", name:"Derrochador", desc:"+15% de coste en Kros/Aliento.", icon:"⚱" },
+  derrochador:{ id:"derrochador", name:"Derrochador", desc:"+18% de coste en Kros/Aliento.", icon:"⚱" },
   miope:{ id:"miope", name:"Miope", desc:"−2 de radio de visión.", icon:"⊘" },
   supersticioso:{ id:"supersticioso", name:"Supersticioso", desc:"−10% de botín (temes ciertos hallazgos).", icon:"⚐" },
-  // — nuevos (sistema de mods) —
+  // — mods —
   insomne:{ id:"insomne", name:"Insomne", desc:"El sueño te vence 40% más rápido.", icon:"◌", mods:{fatigueMult:1.4} },
   gloton:{ id:"gloton", name:"Glotón", desc:"El hambre sube 35% más rápido.", icon:"%", mods:{hungerMult:1.35} },
   paranoico:{ id:"paranoico", name:"Paranoico", desc:"La locura crece 30% más rápido.", icon:"҉", mods:{madnessMult:1.3} },
   manazas:{ id:"manazas", name:"Manazas", desc:"Tu equipo se desgasta 35% más.", icon:"⚒", mods:{durMult:1.35} },
-  anemico:{ id:"anemico", name:"Anémico", desc:"−6 de Aliento máximo.", icon:"♦", mods:{staminaAdd:-6} },
-  disonante:{ id:"disonante", name:"Disonante", desc:"−10% de Kros máximo (tu voz choca con el Tharúm).", icon:"∅", mods:{krosMult:0.9} },
-  cobarde:{ id:"cobarde", name:"Cobarde", desc:"−10% de daño cuando tu vida está por debajo del 40%.", icon:"↯" },
-  torpe:{ id:"torpe", name:"Torpe", desc:"−4% de evasión.", icon:"⊥", mods:{dodgeAdd:-0.04} }
+  anemico:{ id:"anemico", name:"Anémico", desc:"−8 de Aliento máximo.", icon:"♦", mods:{staminaAdd:-8} },
+  disonante:{ id:"disonante", name:"Disonante", desc:"−12% de Kros máximo (tu voz choca con el Tharúm).", icon:"∅", mods:{krosMult:0.88} },
+  cobarde:{ id:"cobarde", name:"Cobarde", desc:"−12% de daño cuando tu vida está por debajo del 40%.", icon:"↯" },
+  torpe:{ id:"torpe", name:"Torpe", desc:"−5% de evasión.", icon:"⊥", mods:{dodgeAdd:-0.05} },
+  // — nuevos —
+  debilucho:{ id:"debilucho", name:"Debilucho", desc:"Cargas menos peso: −6 de capacidad.", icon:"⊟", mods:{carryAdd:-6} },
+  impreciso:{ id:"impreciso", name:"Impreciso", desc:"−8% de precisión con cualquier arma.", icon:"⌗", mods:{accAdd:-0.08} },
+  quebradizo:{ id:"quebradizo", name:"Quebradizo", desc:"+10% de daño físico recibido.", icon:"⊗", mods:{physResistAdd:-0.10} },
+  enfermizo:{ id:"enfermizo", name:"Enfermizo", desc:"Las curaciones que recibes rinden −15%.", icon:"⊝", mods:{healRecvMult:0.85} },
+  vulnerable:{ id:"vulnerable", name:"Vulnerable", desc:"Los estados negativos te duran 25% más.", icon:"❆", mods:{statusDurMult:1.25} }
 };
 
 // estado de regeneración (aura sanadora / tónicos)
@@ -4086,7 +4138,9 @@ DATA.carryCapacity = function(p){
   let cap = Math.round(20 + fue*2.5);
   // MEJORAS DEL SANTUARIO: el Almacén enseña a cargar mejor
   if(typeof sanHas==='function'){ if(sanHas('almacen1'))cap+=8; if(sanHas('almacen2'))cap+=8; }
-  return cap;
+  // RASGOS: Fornido (+6) / Debilucho (−6)
+  if(p.traitMod) cap += p.traitMod('carryAdd',0);
+  return Math.max(10, cap);
 };
 
 // peso total actual del inventario
@@ -4371,14 +4425,17 @@ function genRooms(depth){
     addRoom(cells,rx,ry,span,span,'cross'); return true;
   }
   const shapeFns={rect:makeRect,circle:makeCircle,L:makeL,big:makeBig,cavern:makeCavern,cross:makeCross};
-  let target=Math.max(4, Math.round(rint(7,10)*sizeMult)), tries=0, bigDone=false;
-  while(rooms.length<target && tries<300){
+  // más salas para llenar el mapa ampliado (antes 7-10, ahora 10-15 escaladas)
+  let target=Math.max(6, Math.round(rint(10,15)*sizeMult)), tries=0, bigDone=false;
+  // permitir hasta 2 salones grandes en mapas amplios
+  let bigCount=0, bigMax=(sizeMult>=1.0?2:1);
+  while(rooms.length<target && tries<450){
     tries++;
     let style=rpick(biome.roomStyles||['rect']);
-    if(style==='big'){ if(bigDone){style='rect';} }
-    if(shapeFns[style]&&shapeFns[style]()){ if(style==='big')bigDone=true; }
+    if(style==='big'){ if(bigCount>=bigMax){style='rect';} }
+    if(shapeFns[style]&&shapeFns[style]()){ if(style==='big'){bigDone=true;bigCount++;} }
   }
-  if(rooms.length<3){ while(rooms.length<4 && tries++<400) makeRect(); }
+  if(rooms.length<4){ while(rooms.length<5 && tries++<500) makeRect(); }
 
   // ===== 2) PASILLOS (rectos 1-2 de ancho / orgánicos) =====
   let corridor={};
@@ -4581,13 +4638,19 @@ function genRooms(depth){
   for(let i=others.length-1;i>0;i--){let j=Math.floor(G.rng()*(i+1));[others[i],others[j]]=[others[j],others[i]];}
   if(others[0]) others[0].type='treasure';
   if(others[1]) others[1].type='nest';
-  if(others[2] && rchance(0.6)) others[2].type='shrine';
-  // SALAS ESPECIALES RARAS (sección 2.2)
-  let _spIdx=3;
-  if(others[_spIdx] && rchance(0.22)){ others[_spIdx].type='sanctuary_rest'; _spIdx++; }  // descanso seguro
+  if(others[2] && rchance(0.65)) others[2].type='shrine';
+  // segunda sala de tesoro en mapas grandes con muchas salas
+  let _hayEspacio = others.length>=8;
+  if(_hayEspacio && others[3] && rchance(0.35)){ others[3].type='treasure'; }
+  // SALAS ESPECIALES RARAS (más probables cuando hay salas de sobra)
+  let _spIdx=4;
+  let _spBonus=_hayEspacio?0.12:0;
+  if(others[_spIdx] && rchance(0.24+_spBonus)){ others[_spIdx].type='sanctuary_rest'; _spIdx++; }  // descanso seguro
   let _veilBonus=(typeof calVeilDay==='function'&&calVeilDay())?0.10:0;   // Día del Velo
-  if(others[_spIdx] && rchance(0.18+_veilBonus)){ others[_spIdx].type='portal'; _spIdx++; }   // portal
-  if(others[_spIdx] && rchance(0.20)){ others[_spIdx].type='puzzle'; _spIdx++; }            // acertijo de botones
+  if(others[_spIdx] && rchance(0.20+_veilBonus+_spBonus)){ others[_spIdx].type='portal'; _spIdx++; }   // portal
+  if(others[_spIdx] && rchance(0.22+_spBonus)){ others[_spIdx].type='puzzle'; _spIdx++; }            // acertijo de botones
+  // sala de nido adicional (más enemigos agrupados) en mapas grandes
+  if(_hayEspacio && others[_spIdx] && rchance(0.30)){ others[_spIdx].type='nest'; _spIdx++; }
 
   // ═══ CÁMARA DEL VACÍO ═══════════════════════════════════════════════════
   // De vez en cuando, una sala GRANDE queda deliberadamente vacía: sin adorno,
@@ -4626,25 +4689,42 @@ function genRooms(depth){
     }
   }
 
-  // puertas: donde un pasillo toca el borde de una sala (biomas con puertas)
+  // puertas: en los UMBRALES donde un pasillo entra a una sala. Antes solo en
+  // biomas con biome.doors; ahora hay un valor por defecto para todos, y se
+  // priorizan los "cuellos" (celda de pasillo que conecta con una sala), que es
+  // donde una puerta tiene sentido y se ve bien.
   let doors=[];
-  if(biome.doors){
+  {
+    let doorProb = (biome.doors!=null) ? biome.doors : 0.35;   // por defecto para todos
     let doorSet={};
+    // recopilar celdas-umbral: pasillo tocando una sala, con la sala en un lado
+    let umbrales=[];
     for(let key in corridor){
       let [x,y]=key.split(',').map(Number);
-      // celda de pasillo adyacente a celda de sala (no pasillo)
-      let adjRoom=false, adjCorr=0;
+      let roomDirs=0, corrDirs=0;
       for(let [dx,dy] of [[0,1],[0,-1],[1,0],[-1,0]]){
         let nx=x+dx, ny=y+dy;
         if(!inB(nx,ny))continue;
-        if(tiles[ny][nx]===TILE.FLOOR && !corridor[nx+','+ny]) adjRoom=true;
+        if(tiles[ny][nx]===TILE.FLOOR && !corridor[nx+','+ny]) roomDirs++;
+        else if(corridor[nx+','+ny]) corrDirs++;
       }
-      if(adjRoom && rchance(biome.doors*0.5) && !doorSet[key]){
+      // un buen umbral: toca sala por un lado y es un paso estrecho (1 pasillo detrás)
+      if(roomDirs>=1 && corrDirs<=2) umbrales.push({x,y,roomDirs,corrDirs});
+    }
+    for(let u of umbrales){
+      let key=u.x+','+u.y;
+      if(doorSet[key]) continue;
+      // más probable en cuellos limpios (una salida a sala, un pasillo detrás)
+      let p = (u.roomDirs===1 && u.corrDirs===1) ? doorProb : doorProb*0.5;
+      if(rchance(p)){
+        // no poner dos puertas pegadas
+        let tooClose=doors.some(d=>Math.abs(d.x-u.x)+Math.abs(d.y-u.y)<=1);
+        if(tooClose) continue;
         doorSet[key]=true;
-        tiles[y][x]=TILE.DOOR_C;
+        tiles[u.y][u.x]=TILE.DOOR_C;
         let roll=G.rng();
-        let state = roll<0.55?'normal' : roll<0.85?'atascada' : 'cerrada';
-        doors.push({x,y,state});
+        let state = roll<0.60?'normal' : roll<0.85?'atascada' : 'cerrada';
+        doors.push({x:u.x,y:u.y,state});
       }
     }
   }
@@ -6153,7 +6233,7 @@ function roll(range){ return rint(range[0],range[1]); }
 
 // ---------- MAP GENERATION (procedural caves) ----------
 // Cellular automata cave + connected rooms, like Caves of Qud / Brogue
-const MAP_W = 56, MAP_H = 30;
+const MAP_W = 68, MAP_H = 38;
 const VIEW_W = 39, VIEW_H = 23; // viewport tiles
 
 const TILE = {
@@ -6255,15 +6335,21 @@ function populateLevel(depth){
 
   // ---- ESCALERAS: bajada en el centro de la sala de salida; subida junto al jugador ----
   G.features=[];
-  if(exitR){
-    let s=takeCenter(exitR);
-    G.map.tiles[s[1]][s[0]]=TILE.STAIRS_DOWN;
-    G.features.push({x:s[0],y:s[1],type:'stairs_down'});
-  } else {
-    let far=[G.player.x,G.player.y], fd=0;
-    for(let f of floors){let dd=Math.abs(f[0]-G.player.x)+Math.abs(f[1]-G.player.y);if(dd>fd){fd=dd;far=f;}}
-    G.map.tiles[far[1]][far[0]]=TILE.STAIRS_DOWN;
-    G.features.push({x:far[0],y:far[1],type:'stairs_down'});
+  // LÍMITE DE ZONA (5 pisos): el piso fondo NO tiene escalera descendente.
+  const ZONE_DEPTH=5;
+  let _zbase=(G.incursion && G.incursion.base!=null)?G.incursion.base:1;
+  let esFondoZona = (depth - _zbase + 1) >= ZONE_DEPTH;
+  if(!esFondoZona){
+    if(exitR){
+      let s=takeCenter(exitR);
+      G.map.tiles[s[1]][s[0]]=TILE.STAIRS_DOWN;
+      G.features.push({x:s[0],y:s[1],type:'stairs_down'});
+    } else {
+      let far=[G.player.x,G.player.y], fd=0;
+      for(let f of floors){let dd=Math.abs(f[0]-G.player.x)+Math.abs(f[1]-G.player.y);if(dd>fd){fd=dd;far=f;}}
+      G.map.tiles[far[1]][far[0]]=TILE.STAIRS_DOWN;
+      G.features.push({x:far[0],y:far[1],type:'stairs_down'});
+    }
   }
   // escalera ascendente: NUNCA en el piso de entrada de la incursión (ahí se
   // vuelve con el tótem de extracción ◮, no con una escalera '<'). Solo en
@@ -6281,6 +6367,11 @@ function populateLevel(depth){
   // ---- ENEMIGOS: por salas (nunca en la entrada) ----
   G.enemies=[];
   let baseCount = 4 + Math.floor(depth*1.4);
+  // escalar con el tamaño real del mapa (mapas grandes necesitan más enemigos
+  // para no sentirse vacíos; tope para no saturar)
+  let _mapCells=(G.map.w*G.map.h);
+  let _sizeFactor=Math.min(1.6, Math.max(0.8, _mapCells/(56*30)));
+  baseCount = Math.round(baseCount * _sizeFactor);
   // ANOMALÍA DEL CMF: rastro demoníaco trae más enemigos (aunque más débiles)
   if(G.mapAnomaly && G.mapAnomaly.effect && G.mapAnomaly.effect.enemyCountMult){
     baseCount = Math.round(baseCount * G.mapAnomaly.effect.enemyCountMult);
@@ -6382,6 +6473,29 @@ function populateLevel(depth){
     for(let i=0;i<n;i++){
       let c=take(nest); if(!c)break;
       G.enemies.push(makeEnemy(species, c[0], c[1]));
+    }
+  }
+  // ═══ JEFE DE ÉLITE (fondo de zona, piso 5) ═══
+  // Custodia el fondo de la incursión, en una sala amplia. Deja buen botín y XP.
+  if(esFondoZona && depth>=2){
+    let eliteBosses=DATA.bestiary.filter(b=>b.eliteBoss);
+    if(eliteBosses.length){
+      // elegir el jefe: por bioma si encaja, si no aleatorio determinista por profundidad
+      let eb=eliteBosses[Math.floor(G.rng()*eliteBosses.length)];
+      // buscar la sala más grande disponible (que no sea la entrada)
+      let salas=rooms.filter(r=>r.type!=='entrance'&&r.type!=='void_chamber')
+                     .sort((a,b)=>((b.cells?b.cells.length:b.w*b.h)-(a.cells?a.cells.length:a.w*a.h)));
+      let sala=salas[0]||rooms.find(r=>r.type==='exit');
+      if(sala){
+        let c=takeCenter(sala)||take(sala);
+        if(c){
+          let boss=makeEnemy(eb, c[0], c[1]);
+          boss.alive=true; boss.aggro=false;   // despierta al acercarte (intro cinematográfica)
+          boss._isEliteBoss=true;
+          G.enemies.push(boss);
+          G._eliteBossHere=true;
+        }
+      }
     }
   }
   // TESORO: cofre custodiado
@@ -7118,10 +7232,9 @@ function makePlayer(opts){
       // trasfondo soldado: +vida fija
       let bg = DATA.backgrounds?DATA.backgrounds[this.background]:null;
       if(bg&&bg.startHp) hp += bg.startHp;
-      // rasgos: resistente +12% / frágil -8%
-      if(this.virtue==='resistente') hp *= 1.12;
-      // (los rasgos nuevos con hpMult entrarían aquí)
-      if(this.flaw==='fragil') hp *= 0.92;
+      // rasgos: Resistente +15% / Frágil −15% (se cancelan si se combinan: sin vida gratis)
+      if(this.virtue==='resistente') hp *= 1.15;
+      if(this.flaw==='fragil') hp *= 0.85;
       if(this.pactTaken) hp *= 0.88;   // el precio del Altar del Pacto
       if(lin&&lin.hpMult) hp *= lin.hpMult;   // orco: cuerpo masivo
       if(typeof talentMod==='function') hp *= talentMod('hpMult',1);
@@ -7390,6 +7503,7 @@ function makePlayer(opts){
       if(pg){ if(pg.state==='injured')i-=2; else if(pg.state==='crippled')i-=5; }
       i+=_gearInit;   // BOTAS DEL VIENTO: iniciativa extra
       if(typeof talentMod==='function') i+=talentMod('initAdd',0);   // árbol: Reflejos
+      i = this.traitMod('initAdd', i);   // rasgos: Veloz (+2)
       return i;
     },
     dodge(){
@@ -8493,11 +8607,13 @@ function computePhi(spell){
 
 // ---------- ESTADOS ----------
 function applyStatus(entity, effect){
-  // Templado: los estados negativos duran menos al jugador
-  if(entity===G.player && G.player.virtue && DATA.virtues[G.player.virtue] && DATA.virtues[G.player.virtue].mods && DATA.virtues[G.player.virtue].mods.statusDurMult){
-    const _sm=DATA.virtues[G.player.virtue].mods.statusDurMult;
-    const _buffs={shield:1,regen:1,torch:1,haste:1,aim:1};
-    for(let k in effect){ if(!_buffs[k] && typeof effect[k]==='number') effect[k]=Math.max(1,Math.ceil(effect[k]*_sm)); }
+  // Templado/Vulnerable: los estados negativos duran menos/más al jugador
+  if(entity===G.player && G.player.traitMod){
+    const _sm=G.player.traitMod('statusDurMult',1);
+    if(_sm!==1){
+      const _buffs={shield:1,regen:1,torch:1,haste:1,aim:1};
+      for(let k in effect){ if(!_buffs[k] && typeof effect[k]==='number') effect[k]=Math.max(1,Math.ceil(effect[k]*_sm)); }
+    }
   }
   if(!effect)return;
   for(let key in effect){
@@ -8648,6 +8764,14 @@ function tickStatuses(entity, inCombat){
   // habilidades que lo consumen (clase libre), así que todos lo regeneran.
   if(entity===G.player && (entity.staminaMax||0)>0 && typeof regenStamina==='function'){
     regenStamina(1);
+  }
+  // RASGO Regenerativo: cura 1 de vida cada 4 pasos (mods.regenExplore)
+  if(entity===G.player && entity.traitMod){
+    let rx=entity.traitMod('regenExplore',0);
+    if(rx>0 && entity.hp<entity.hpMax){
+      entity._regenStep=(entity._regenStep||0)+1;
+      if(entity._regenStep>=4){ entity._regenStep=0; entity.hp=Math.min(entity.hpMax, entity.hp+rx); }
+    }
   }
 }
 
@@ -9072,10 +9196,28 @@ function rangeOfSkill(k){
   return [0,10];
 }
 function enemyRange(e){
-  if(e.boss)return [0,3];
-  if(e.ai==='ranged'||e.ai==='caster')return [3,8];
-  return [0,2];
+  // rango [min,max] de ataque en el eje táctico (0–10). Se mantiene ACOTADO para
+  // que el combate sea justo: un enemigo a distancia no golpea desde el otro
+  // extremo de la sala. El jugador ve estas zonas en la barra de distancia.
+  if(e.range && Array.isArray(e.range)) return e.range;   // override por especie si se define
+  if(e.boss) return [0,4];                 // jefes: alcance medio, mixto
+  if(e.ai==='caster') return [2,6];        // magos: rango medio, pueden acercarse algo
+  if(e.ai==='ranged') return [3,7];        // arqueros: necesitan algo de distancia
+  return [0,1];                            // melé y flanqueo: adyacente (1 casilla)
 }
+// Describe CÓMO ataca un enemigo, para que el jugador lo sepa de antemano y el
+// combate no se sienta injusto. Devuelve {icon, label, kind, range:[min,max]}.
+function enemyAttackInfo(e){
+  let [rmin,rmax]=enemyRange(e);
+  let kind, icon, label;
+  if(e.ai==='caster'){ kind='magic'; icon='✦'; label='Mágico a distancia'; }
+  else if(e.ai==='ranged'){ kind='ranged'; icon='➶'; label='A distancia'; }
+  else if(e.ai==='flank'){ kind='melee'; icon='⚔'; label='Cuerpo a cuerpo (flanqueo)'; }
+  else if(e.boss){ kind='mixed'; icon='⚔'; label='Mixto'; }
+  else { kind='melee'; icon='⚔'; label='Cuerpo a cuerpo'; }
+  return {icon:icon, label:label, kind:kind, range:[rmin,rmax]};
+}
+window.enemyAttackInfo=enemyAttackInfo;
 // Pasos que avanza un enemigo por turno en el eje táctico (0–10).
 // La unidad base es 1 casilla, IGUAL que el jugador: así el eje se recorre
 // paso a paso y la distancia se puede controlar de verdad. Solo las criaturas
@@ -9492,7 +9634,8 @@ function currentActor(){
 function aliveCombatant(c){
   if(!c)return false;
   if(c.isPlayer) return G.player.hp>0;
-  return c.ref.alive && c.ref.hp>0;
+  // hp NaN o <=0 cuenta como muerto (protección contra estados inválidos)
+  return !!c.ref.alive && typeof c.ref.hp==='number' && !isNaN(c.ref.hp) && c.ref.hp>0;
 }
 
 // ---------- BUCLE DE TURNOS (el corazón, robusto) ----------
@@ -10330,6 +10473,29 @@ function aiEnemyAct(actor){
     return;
   }
 
+  // VERIFICACIÓN DE RANGO (justicia): tras moverse, el enemigo solo ataca si el
+  // objetivo está DENTRO de su alcance real. Si no llegó (quedó fuera de rango),
+  // no golpea "desde el aire": pierde el ataque reposicionándose. Esto evita la
+  // sensación de que atacan desde imposible. El jugador ve el alcance en la barra.
+  {
+    let _ai=(typeof enemyAttackInfo==='function')?enemyAttackInfo(e):null;
+    if(_ai){
+      let _d=combatDist(actor, target);
+      let [_mn,_mx]=_ai.range;
+      // a quemarropa (acorralado) es la única excepción de mínimo para ranged
+      let _okMin = e._pointBlank ? true : (_d>=_mn);
+      if(!(_okMin && _d<=_mx)){
+        combatLog(actor.name+' no te alcanza (distancia '+_d+', su alcance es '+_mn+'–'+_mx+') y se reposiciona.','flavor');
+        // dar un paso hacia el rango para el próximo turno
+        let spd=enemySpeedMove(e);
+        if(_d>_mx){ actor.pos += (actor.pos>target.pos? -spd : spd); }
+        else if(_d<_mn){ actor.pos += (actor.pos>target.pos? spd : -spd); }
+        actor.pos=Math.max(0,Math.min(10,actor.pos));
+        renderCombat(); return;
+      }
+    }
+  }
+
   // ataque normal
   enemyDealDamage(actor,target,{});
 }
@@ -10560,8 +10726,13 @@ function enemyDealDamage(actor, target, opts){
       if(res>0) dmg=Math.floor(dmg*(1-res));
       else if(res<0) dmg=Math.floor(dmg*(1-res)); // vulnerabilidad: res negativo aumenta
     }
-    // rasgo iracundo: +10% daño recibido
-    if(G.player.flaw==='iracundo') dmg=Math.floor(dmg*1.10);
+    // rasgo iracundo: +12% daño recibido
+    if(G.player.flaw==='iracundo') dmg=Math.floor(dmg*1.12);
+    // rasgos Férreo (−10% físico) / Quebradizo (+10%): solo daño físico (sin elemento)
+    if(!elem && G.player.traitMod){
+      let pr=G.player.traitMod('physResistAdd',0);
+      if(pr) dmg=Math.max(1, Math.floor(dmg*(1-pr)));
+    }
     // guardia
     if(G.player.statuses.guard)dmg=Math.floor(dmg*0.5);
     // furia del jugador: recibe más
@@ -10617,7 +10788,12 @@ function enemyDealDamage(actor, target, opts){
     }
     // contragolpe / riposte
     if(G.player.statuses.riposte){
-      let back=Math.floor(roll(G.player.weaponDmg())*0.6);
+      // weaponDmg() devuelve un OBJETO {min,max}, no un array: antes se pasaba a
+      // roll() (que espera [a,b]) y devolvía NaN → el enemigo quedaba con hp=NaN,
+      // no moría, y el combate entraba en un bucle. Ahora usamos min/max.
+      let _wd=G.player.weaponDmg();
+      let _base=rint(_wd.min||1, _wd.max||2);
+      let back=Math.max(1, Math.floor(_base*0.6));
       e.hp-=back; combatLog('↩ Contragolpe: '+actor.name+' recibe '+back+'.','good');
       if(e.hp<=0)handleEnemyDeath(actor);
     }
@@ -10678,6 +10854,9 @@ function handleEnemyDeath(tc){
     setTimeout(()=>{ if(typeof showVictoryScreen==='function') showVictoryScreen(); }, 900);
   }
   let e=tc.ref;
+  // saneo defensivo: si el hp quedó como NaN/negativo por cualquier cálculo, se
+  // trata como 0 (muerto). Evita enemigos "fantasma" que traban el combate.
+  if(isNaN(e.hp)) e.hp=0;
   if(!e.alive)return;
   if(window.combatFX && combatFX.death){ let _did=cbidOf(e); if(_did>=0) combatFX.death(_did); }
   e.alive=false; e.hp=0;
@@ -10696,7 +10875,8 @@ function handleEnemyDeath(tc){
   if(e.xp)gainXP(e.xp);
   // botín pendiente
   if(e.loot&&e.loot.length){
-    let n=e.boss?3:(rchance(0.7)?1:0);
+    // JEFE DE ÉLITE: botín generoso (casi todo su loot) + esquirlas garantizadas
+    let n = e.eliteBoss ? Math.max(4, e.loot.length-1) : (e.boss?3:(rchance(0.7)?1:0));
     if(G.player.passive==='radestesia')n++;
     if(G.player.virtue==='afortunado'&&rchance(0.4))n++;     // afortunado: más botín
     if(G.player.flaw==='supersticioso'&&n>0&&rchance(0.3))n--; // supersticioso: menos
@@ -10709,6 +10889,17 @@ function handleEnemyDeath(tc){
         G.combat.pendingLoot.push(pick);
       }
     }
+  }
+  // JEFE DE ÉLITE: recompensa especial garantizada
+  if(e.eliteBoss){
+    let bonus = rint(40, 80);   // buen puñado de esquirlas
+    G.player.gold = (G.player.gold||0) + bonus;
+    logMsg('◆ El Jefe de Élite cae. Botín excepcional: +'+bonus+' esquirlas.','loot');
+    if(typeof sfx==='function') sfx('victory');
+    // objeto valioso extra si tiene loot
+    if(e.loot&&e.loot.length){ G.combat.pendingLoot.push(rpick(e.loot)); }
+    // logro/registro
+    if(typeof journalAdd==='function') journalAdd('Derrotaste a un Jefe de Élite: '+e.name+'.');
   }
 }
 
@@ -10868,6 +11059,8 @@ function resolvePlayerAttackPart(target, part){
   if(G.player.statuses.confuse)miss+=0.3;
   // aplicar el % de acierto de la parte
   let hitChance=(part.hitChance||0.8) * (1-miss);
+  // RASGOS: Certero (+8% precisión) / Impreciso (−8%)
+  if(G.player.traitMod) hitChance=Math.min(0.99, hitChance + G.player.traitMod('accAdd',0));
   // MIEMBRO INFERIOR DAÑADO del enemigo: esquiva menos, es más fácil acertarle
   if(target&&target.ref){ let _te=target.ref;
     if(_te._legState==='crippled'||_te._grounded) hitChance=Math.min(0.98,hitChance*1.3);
@@ -13555,6 +13748,16 @@ Game.descend=function(){
   let p=G.player;
   let f=G.features.find(ff=>ff.x===p.x&&ff.y===p.y&&ff.type==='stairs_down');
   if(!f){ logMsg('No hay escalera descendente aquí.','flavor'); return; }
+  // LÍMITE DE ZONA: desde el inicio de la incursión solo se pueden bajar 5 pisos.
+  // Al alcanzar el fondo, hay que volver al piso anterior o EXTRAER con el botín.
+  const ZONE_DEPTH = 5;
+  let zoneBase = (G.incursion && G.incursion.base!=null) ? G.incursion.base : 1;
+  if(G.depth - zoneBase + 1 >= ZONE_DEPTH){
+    logMsg('▼ El pozo se estrecha hasta cerrarse: no se puede descender más en esta zona (límite de '+ZONE_DEPTH+' pisos).','sys');
+    logMsg('◮ Extrae con tu botín desde el tótem, o vuelve sobre tus pasos hacia arriba.','flavor');
+    if(typeof sfx==='function') sfx('uiError');
+    return;
+  }
   G.depth++;
   if(typeof sfx==='function')sfx('stairs');
   logMsg('▼ Desciendes al nivel '+G.depth+' de la cueva.','sys');
@@ -13572,7 +13775,11 @@ Game.descend=function(){
   // guiño de cuarta pared (muy raro: ~4%)
   if(DATA.fourthWall && rchance(0.04)) logMsg(rpick(DATA.fourthWall),'flavor');
   buildLevel(G.depth);
-  // un tótem de extracción te espera en este piso: puedes volver con el botín cuando quieras
+  // aviso del fondo de zona: aquí acecha un jefe de élite
+  if(G._eliteBossHere){
+    logMsg('⚠ EL FONDO DE LA ZONA. Algo poderoso custodia este lugar. Buenas recompensas… si sobrevives.','sys');
+    if(typeof combatBanner==='function') combatBanner('◆ Jefe de Élite cerca', 'danger');
+  }
   if(G.incursion && G.depth>G.incursion.base){ placeExtractionTotem();
     logMsg('◮ Un tótem de extracción brilla cerca. Puedes volver al Santuario desde aquí cuando quieras.','sys'); }
   updateUI(); renderMap(); renderExploreActions();
@@ -13871,7 +14078,7 @@ Game._npcReclutador=function(root){
   let hired=SAN.companions||[];
   let cap=2+((typeof sanHas==='function'&&sanHas('vidente1'))?1:0)+((typeof sanBuilt==='function'&&sanBuilt('barracon'))?1:0);
   let html='<div class="small" style="line-height:1.7"><b class="c-gold">EL RECLUTADOR</b> apoya la bota en un barril. Tras él, siluetas esperan trabajo.</div>';
-  html+='<div class="small c-dim mb" style="font-style:italic">«Contrato compañeros para tu expedición: mercenarios que pelean a tu lado con criterio propio. Si caen ahí abajo… no vuelven. El precio lo pagas una vez.»</div>';
+  html+=dlgLine('reclutador','Contrato compañeros para tu expedición: mercenarios que pelean a tu lado con criterio propio. Si caen ahí abajo… no vuelven. El precio lo pagas una vez.','c-dim');
   // compañeros ya contratados
   html+='<div class="small mt" style="color:var(--gold)">◈ Tu compañía ('+hired.length+'/'+cap+'):</div>';
   if(!hired.length) html+='<div class="small c-dim">— Nadie todavía. —</div>';
@@ -13945,21 +14152,21 @@ Game._npcErudito=function(root){
   let html='<div class="flex-between mb"><span style="color:var(--cyan)">✶ EL ERUDITO</span><span class="c-gold">₱ '+(p.gold||0)+'</span></div>';
   html+='<div class="small" style="line-height:1.7">Guarda grimorios que el Collegium prohibiría. Cada semana, mercancía nueva.</div>';
   if(root==='lore'){
-    html+='<div class="small mt" style="font-style:italic">«El Edicto de las Esferas quemó las Casas, pero no el saber. Yo rescato lo que arde. ¿Un hechizo? Tengo de las cinco ramas legales… y sé dónde buscar las otras, aunque eso no te lo vendería ni muerto.»</div>';
+    html+=dlgLine('erudito','El Edicto de las Esferas quemó las Casas, pero no el saber. Yo rescato lo que arde. ¿Un hechizo? Tengo de las cinco ramas legales… y sé dónde buscar las otras, aunque eso no te lo vendería ni muerto.');
     return openModal('E · EL ERUDITO', html, [{label:'✶ ¿Las ramas prohibidas?', action:()=>Game._npcErudito('prohibidas')},{label:'❦ ¿El Edicto?', action:()=>Game._npcErudito('edicto')},{label:'◂ Volver', action:()=>Game._npcErudito()},{label:'Marcharse',action:'close'}]);
   }
   if(root==='prohibidas'){
-    html+='<div class="small mt" style="font-style:italic">«Cinco ramas bendice el Imperio: Luz, Oscuridad, las Cuatro Mentes, Neuromancia, Ecolalia. Y tres las condena a muerte.» Baja la voz. «Carne, que cose vasijas con muertos. Sangre, que paga poder con vida. Vacío, que invoca lo que Nocturnis dejó entre las estrellas.»</div>';
-    html+='<div class="small mt c-dim">«Aquí abajo, lejos de los inquisidores, la línea entre lo legal y lo prohibido se difumina. La anomalía no juzga. Solo cobra. ¿Te interesa cruzar esa línea? …No lo dije yo.»</div>';
+    html+=dlgLine('erudito','Cinco ramas bendice el Imperio: Luz, Oscuridad, las Cuatro Mentes, Neuromancia, Ecolalia. Y tres las condena a muerte. Carne, que cose vasijas con muertos. Sangre, que paga poder con vida. Vacío, que invoca lo que Nocturnis dejó entre las estrellas.');
+    html+=dlgLine('erudito','Aquí abajo, lejos de los inquisidores, la línea entre lo legal y lo prohibido se difumina. La anomalía no juzga. Solo cobra. ¿Te interesa cruzar esa línea? …No lo dije yo.','c-dim');
     return openModal('E · EL ERUDITO', html, [{label:'◂ Volver', action:()=>Game._npcErudito('lore')},{label:'Marcharse',action:'close'}]);
   }
   if(root==='edicto'){
-    html+='<div class="small mt" style="font-style:italic">«El Edicto de las Esferas. La ley que promulgó el Imperio tras las Guerras de las Casas, cuando los magos casi queman el mundo peleando entre sí. Define qué magia es legal, quién puede aprenderla, y qué se hace con los que cruzan la raya.»</div>';
-    html+='<div class="small mt c-dim">«Ordenó el caos, sí. También quemó bibliotecas enteras por precaución. Yo salvo lo que puedo de esas hogueras. Alguien tiene que recordar lo que el orden prefiere olvidar.»</div>';
+    html+=dlgLine('erudito','El Edicto de las Esferas. La ley que promulgó el Imperio tras las Guerras de las Casas, cuando los magos casi queman el mundo peleando entre sí. Define qué magia es legal, quién puede aprenderla, y qué se hace con los que cruzan la raya.');
+    html+=dlgLine('erudito','Ordenó el caos, sí. También quemó bibliotecas enteras por precaución. Yo salvo lo que puedo de esas hogueras. Alguien tiene que recordar lo que el orden prefiere olvidar.','c-dim');
     return openModal('E · EL ERUDITO', html, [{label:'◂ Volver', action:()=>Game._npcErudito('lore')},{label:'Marcharse',action:'close'}]);
   }
   if(!usesMagic){
-    html+='<div class="small mt" style="font-style:italic">«Ah. Tu Núcleo está dormido — o no naciste con él. Las runas Tharúm no te servirían de nada. Vuelve si algún día despiertas al CMF.»</div>';
+    html+=dlgLine('erudito','Ah. Tu Núcleo está dormido — o no naciste con él. Las runas Tharúm no te servirían de nada. Vuelve si algún día despiertas al CMF.');
     return openModal('E · EL ERUDITO', html, [{label:'Marcharse',action:'close'}]);
   }
   let stock=eruditoStock();
@@ -14834,6 +15041,28 @@ function distanceBarHTML(c){
       }
     }
   }
+  // ZONAS DE AMENAZA ENEMIGA: dónde puede golpear cada enemigo desde su posición.
+  // Así el jugador VE si al quedarse quieto o acercarse entrará en su alcance.
+  // Se pinta una franja tenue desde la posición del enemigo hacia el jugador.
+  let threat='';
+  if(!c.pendingRange){   // no saturar cuando el jugador está apuntando
+    for(const cb of c.combatants){
+      if(!cb.isEnemy || !aliveCombatant(cb)) continue;
+      if(cb.pos===undefined) continue;
+      let ai=(typeof enemyAttackInfo==='function')?enemyAttackInfo(cb.ref):null;
+      if(!ai) continue;
+      let [mn,mx]=ai.range;
+      // la amenaza se extiende a ambos lados de la posición del enemigo
+      for(const sgn of [-1,1]){
+        let a=cb.pos+sgn*mn, b=cb.pos+sgn*mx;
+        let lo=Math.max(0,Math.min(a,b)), hi=Math.min(10,Math.max(a,b));
+        if(hi>=lo){
+          let col = ai.kind==='magic'?'--violet' : ai.kind==='ranged'?'--cyan' : '--red';
+          threat+=`<div class="dr-threat" style="left:${lo*10}%;width:${Math.max(2,(hi-lo)*10)}%;--tc:${getCssVar(col)}"></div>`;
+        }
+      }
+    }
+  }
   // marcas 0..10
   let ticks='';
   for(let i=0;i<=10;i++) ticks+=`<div class="dt" style="left:${i*10}%"></div>`;
@@ -14856,11 +15085,13 @@ function distanceBarHTML(c){
       let cb=grupo[j];
       let cls=cb.isPlayer?'pl':(cb.isEnemy?'en':'al');
       let topOff = 2 + j*15;   // cada ficha en su fila dentro de la misma columna
-      icons+=`<span class="di ${cls}" style="left:${cb.pos*10}%;top:${topOff}px" title="${cb.name} · posición ${cb.pos}">${cb.isPlayer?'@':cb.glyph}</span>`;
+      let ttl = cb.name+' · posición '+cb.pos;
+      if(cb.isEnemy && typeof enemyAttackInfo==='function'){ let ai=enemyAttackInfo(cb.ref); ttl+=' · '+ai.label+' (alcance '+ai.range[0]+'–'+ai.range[1]+')'; }
+      icons+=`<span class="di ${cls}" style="left:${cb.pos*10}%;top:${topOff}px" title="${ttl}">${cb.isPlayer?'@':cb.glyph}</span>`;
     }
   }
   return `<div class="dist-wrap">
-    <div class="dist-track">${bands}${ticks}${icons}</div>
+    <div class="dist-track">${threat}${bands}${ticks}${icons}</div>
     <div class="dist-lbl"><span>▓ MURO · 0</span><span class="c-dim">— DISTANCIA —</span><span>10</span></div>
   </div>`;
 }
@@ -14948,6 +15179,21 @@ function renderCombatantBlock(cm, isEnemy, actor){
   let st=statusIconsBig(e);
   if(st)nameLine+=' '+st;
 
+  // TIPO DE ATAQUE Y RANGO: para enemigos, mostrar cómo atacan y a qué distancia,
+  // así el jugador puede anticipar y el combate se siente justo. Se lee sin hover.
+  let atkLine='';
+  if(isEnemy && typeof enemyAttackInfo==='function'){
+    let ai=enemyAttackInfo(e);
+    let kindCol = ai.kind==='magic'?'--violet-bright' : ai.kind==='ranged'?'--cyan' : ai.kind==='mixed'?'--amber-glow' : '--red';
+    let dist = combatDist(cm, G.combat.combatants.find(x=>x.isPlayer)||cm);
+    // ¿te alcanza AHORA mismo?
+    let enRango = dist>=ai.range[0] && dist<=ai.range[1];
+    let rangoTxt = ai.range[0]===ai.range[1] ? ('alcance '+ai.range[1]) : ('alcance '+ai.range[0]+'–'+ai.range[1]);
+    atkLine = '  <span class="cb-atk" style="color:'+getCssVar(kindCol)+'">'+ai.icon+' '+ai.label+'</span>'+
+              '<span class="small c-dim"> · '+rangoTxt+'</span>'+
+              (enRango ? ' <span class="small" style="color:var(--red-bright)">◈ te alcanza</span>' : ' <span class="small c-dim">○ fuera de alcance</span>');
+  }
+
   // barra de vida
   let hpPct=e.hp/e.hpMax;
   let barW=24;
@@ -14965,7 +15211,7 @@ function renderCombatantBlock(cm, isEnemy, actor){
   let atbBar='  <span class="small" style="color:'+getCssVar(atbCol)+'">ATB '+'▮'.repeat(af)+'</span>'+
              '<span class="small" style="color:'+getCssVar('--line')+'">'+'▯'.repeat(aw-af)+'</span>';
 
-  return nameLine+'<br>'+bar+'<br>'+atbBar;
+  return nameLine+'<br>'+bar+'<br>'+atbBar+(atkLine?'<br>'+atkLine:'');
 }
 
 // bloque del jugador
@@ -19829,52 +20075,55 @@ function renderMinimap(){
 }
 window.renderMinimap=renderMinimap;
 
+// mide el ancho/alto real de un carácter monoespaciado en el viewport, para el
+// tamaño de fuente actual. Cachea por tamaño para no medir en cada frame.
+let _charMetricCache={};
+function measureChar(vp, fontPx){
+  let key=Math.round(fontPx*100);
+  if(_charMetricCache[key]) return _charMetricCache[key];
+  let probe=document.createElement('span');
+  probe.style.cssText='position:absolute;visibility:hidden;white-space:pre;font-family:inherit;line-height:1;font-size:'+fontPx+'px';
+  probe.textContent='██████████';  // 10 celdas
+  vp.appendChild(probe);
+  let r=probe.getBoundingClientRect();
+  vp.removeChild(probe);
+  let m={w:(r.width/10)||fontPx*0.6, h:r.height||fontPx};
+  _charMetricCache[key]=m;
+  return m;
+}
+
 function fitViewport(){
   let vp=document.getElementById('viewport');
   if(!vp)return;
-  if(!isMobileLayout()){
-    // PC: autoajustar la fuente para que el mapa quepa en el panel.
-    // El ZOOM también aplica aquí: recorta el viewport para que cada casilla
-    // se dibuje más grande (antes el mapa completo se veía diminuto).
-    if(typeof G!=='undefined' && G && G.inCombat){ vp.style.fontSize=''; vp.style.lineHeight=''; return; }
-    let availW=(vp.clientWidth||900)-20, availH=(vp.clientHeight||500)-16;
-    let d=mobileZoomDims();
-    const COLS=d.cols, ROWS=d.rows;
-    const charW=0.60, lineH=1.0;
-    let size=Math.min(availW/(COLS*charW), availH/(ROWS*lineH));
-    size=Math.max(10, Math.min(30, size));   // tope más alto: permite acercarse de verdad
-    vp.style.fontSize=size.toFixed(2)+'px';
-    vp.style.lineHeight=lineH;
-    return;
-  }
-
-  // EN COMBATE: el zoom del mapa NO aplica; tamaño fijo legible
-  // (evita el "zoom automático" incómodo al entrar en combate)
+  // EN COMBATE: el zoom del mapa NO aplica; tamaño fijo legible en ambos layouts
   if(typeof G!=='undefined' && G && G.inCombat){
-    vp.style.fontSize='12px';
-    vp.style.lineHeight='1.3';
+    if(isMobileLayout()){ vp.style.fontSize='12px'; vp.style.lineHeight='1.3'; }
+    else { vp.style.fontSize=''; vp.style.lineHeight=''; }
     return;
   }
-
-  // en móvil, usamos el recorte según zoom para agrandar cada casilla
-  let dims = mobileZoomDims();
-  const COLS = dims.cols;
-  const ROWS = dims.rows;
-
-  // espacio disponible del panel del viewport
-  let availW = (vp.clientWidth || window.innerWidth) - 8;
-  let availH = (vp.clientHeight || 300) - 6;
-
-  const charW = 0.60;
-  const lineH = 1.05;
-
-  let sizeByW = availW / (COLS * charW);
-  let sizeByH = availH / (ROWS * lineH);
-  let size = Math.min(sizeByW, sizeByH);
-  size = Math.max(8, Math.min(28, size));
-
-  vp.style.fontSize = size.toFixed(2)+'px';
-  vp.style.lineHeight = lineH;
+  let d=mobileZoomDims();
+  const COLS=d.cols, ROWS=d.rows;
+  // espacio disponible dentro del panel (descontando el padding del #viewport)
+  let padX = isMobileLayout()? 8 : 20;
+  let padY = isMobileLayout()? 6 : 16;
+  let availW=(vp.clientWidth||window.innerWidth||900)-padX;
+  let availH=(vp.clientHeight||500)-padY;
+  // buscamos el mayor tamaño de fuente tal que COLSxROWS quepa, midiendo el
+  // ancho REAL del carácter (antes se asumía 0.60 y el zoom quedaba desalineado
+  // y recortaba filas/columnas). Iteramos un par de veces porque el ancho del
+  // glifo escala con el tamaño.
+  let size = isMobileLayout()? 16 : 20;
+  for(let iter=0; iter<6; iter++){
+    let m=measureChar(vp, size);
+    let sizeByW = availW / (COLS * (m.w/size));   // m.w/size = ancho relativo del glifo
+    let sizeByH = availH / (ROWS * (m.h/size));   // m.h/size = alto relativo (≈ line-height 1)
+    let next = Math.min(sizeByW, sizeByH);
+    next = Math.max(8, Math.min(isMobileLayout()?30:34, next));
+    if(Math.abs(next-size) < 0.3) { size=next; break; }
+    size=next;
+  }
+  vp.style.fontSize=size.toFixed(2)+'px';
+  vp.style.lineHeight='1';
 }
 
 // ---------- ALTERNAR controles según contexto (combate vs exploración) ----------
