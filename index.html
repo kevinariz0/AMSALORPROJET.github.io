@@ -2343,7 +2343,7 @@ DATA.skills = {
     desc:"Entras en frenesí: +50% daño durante 3 turnos, pero recibes más daño.", cost:4, costType:"stamina",
     type:"buff", effect:{rage:3}, target:"self"},
   hachazo_brutal:{id:"hachazo_brutal", name:"Hachazo Brutal", icon:"⚔", color:"--red-bright",
-    desc:"Un golpe salvaje que ignora parte de la armadura enemiga.", cost:3, costType:"stamina",
+    desc:"Un golpe salvaje que ignora parte de la armadura enemiga.", cost:4, costType:"stamina",
     type:"attack", dmgMult:2.0, armorPierce:5, target:"enemy"},
   grito_guerra:{id:"grito_guerra", name:"Grito de Guerra", icon:"❗", color:"--amber",
     desc:"Un alarido que intimida al enemigo, reduciendo su daño.", cost:2, costType:"stamina",
@@ -2374,7 +2374,7 @@ DATA.skills = {
   // ===== CAZADOR =====
   disparo_venenoso:{id:"disparo_venenoso", needsBow:true, name:"Disparo Venenoso", icon:"☠", color:"--green-dim",
     desc:"Flecha emponzoñada: inflige daño por veneno durante varios turnos.", cost:3, costType:"stamina",
-    type:"attack", dmgMult:1.0, effect:{poison:4}, target:"enemy"},
+    type:"attack", dmgMult:1.0, effect:{poison:6}, target:"enemy", reqWeapon:"ranged"},
   trampa:{id:"trampa", name:"Trampa de Lazo", icon:"⊗", color:"--amber",
     desc:"Inmovilizas al enemigo, impidiéndole actuar un turno.", cost:4, costType:"stamina",
     type:"debuff", effect:{root:2}, target:"enemy"},
@@ -2383,9 +2383,9 @@ DATA.skills = {
     type:"debuff", effect:{vulnerable:3}, target:"enemy"},
 
   // ===== TIRADOR =====
-  tiro_perforante:{id:"tiro_perforante", name:"Tiro Perforante", icon:"➹", color:"--green",
+  tiro_perforante:{id:"tiro_perforante", needsBow:true, name:"Tiro Perforante", icon:"➹", color:"--green",
     desc:"Proyectil que atraviesa toda armadura y causa gran daño.", cost:4, costType:"stamina",
-    type:"attack", dmgMult:1.7, armorPierce:99, target:"enemy"},
+    type:"attack", dmgMult:1.7, armorPierce:99, target:"enemy", reqWeapon:"ranged"},
   apuntar:{id:"apuntar", name:"Apuntar", icon:"⊕", color:"--cyan",
     desc:"Te concentras: tu próximo disparo es crítico garantizado.", cost:2, costType:"stamina",
     type:"buff", effect:{aim:2, reqWeapon:"ranged"}, target:"self"},
@@ -5175,22 +5175,55 @@ DATA.miniBosses = [
    hp:[110,130], dmg:[14,20], speed:2, range:1, xp:150, psi:0.5, armor:5,
    desc:"Un amasijo de músculo y hueso de los devorados, animado por la anomalía para custodiar su garganta. Lleva las armas de todos los que mató.",
    ai:"melee", loot:["corazon_mecanico","geoda_kros","acero_quirurgico"],
-   attack:"descarga un mazo hecho de fémures"},
+   attack:"descarga un mazo hecho de fémures",
+   // ═══ narrativa: la DESESPERANZA de los que ya cayeron ═══
+   theme:"desesperanza",
+   onAppear:[
+     "El Guardián se yergue con un crujido de huesos ajenos. Reconoces las armas que cuelgan de su carne: la lanza de uno, el hacha mellada de otro — reliquias de los Ecos que bajaron antes que tú y no volvieron a subir.",
+     "«Otro. Siempre otro.» — su voz no es una, son muchas, el coro de todos los que devoró. — «Bajáis, uno tras otro, con la misma cara terca. Os mato, os sumo, y espero al siguiente. ¿Cuándo entenderéis que no hay fondo, solo más de mí?»"
+   ],
+   onDeath:[
+     "El Guardián se desploma como un títere sin manos, y las armas de los caídos repican contra la piedra, libres al fin de su carne.",
+     "Recoges un filo. No es un trofeo: es un relevo. Cada Eco que cayó aquí te entrega, en su derrota, el paso que a él le faltó dar. No los venciste — heredaste su avance."
+   ]},
   {id:"digestor", name:"El Digestor", glyph:"D", color:"--red-bright", tier:3, boss:true, origin:"anomalia",
    hp:[150,180], dmg:[17,25], speed:1, range:2, xp:220, psi:0.5, resist:{poison:0.8},
    desc:"El estómago consciente de la anomalía: una cámara de carne con dientes por dentro. Aquí terminan los que se rinden.",
    ai:"caster", loot:["acido_gastrico","corazon_demonio","geoda_kros"], effect:{poison:4}, traits:["castConfuse"],
-   attack:"te baña en jugos digestivos"}
+   attack:"te baña en jugos digestivos",
+   // ═══ narrativa: la CONDENA, el peso de rendirse ═══
+   theme:"condena",
+   onAppear:[
+     "El Digestor palpita, lento, saciado. En sus paredes translúcidas flotan rostros a medio disolver: los Ecos que un día dejaron de luchar, suspendidos para siempre en el instante en que se rindieron.",
+     "«Descansa», gorgotea, y la palabra es casi tierna. «Deja de descender. Todos lo hacen, al final — se cansan, se sientan, se dejan. La rueda no premia al que insiste. Solo alarga su condena. Ven. Aquí no duele.»"
+   ],
+   onDeath:[
+     "El Digestor se abre en canal y los rostros atrapados exhalan a la vez un suspiro que llevaba siglos contenido. Se deshacen — no digeridos ya, sino sueltos.",
+     "No los salvaste; era tarde para ellos. Pero al no sentarte, al no rendirte donde ellos se rindieron, les diste lo único que la anomalía les negó: que su caída significara algo. Que alguien pasara de largo por donde ellos se quedaron."
+   ]}
 ];
 DATA.finalBoss = {
   id:"corazon_anomalia", name:"EL CORAZÓN DE LA ANOMALÍA", glyph:"Ω", color:"--red-bright", tier:5, boss:true, finalBoss:true, origin:"anomalia",
   hp:[320,360], dmg:[22,32], speed:2, range:4, xp:999, psi:0.05, armor:6, drains:true,
   desc:"El núcleo palpitante de la herida que te tragó. Una masa de carne, grieta y hambre del tamaño de una torre. Si muere, la anomalía muere. Si la anomalía muere… la boca se abre.",
   ai:"boss", loot:[], traits:["drainKros","castVoid","summonWall"],
-  attack:"contrae todas sus fauces sobre ti"
+  attack:"contrae todas sus fauces sobre ti",
+  theme:"esperanza",
+  onAppear:[
+    "El Corazón late, y con cada latido lo SIENTES: a todos los Ecos que giran en la herida. Los que el Guardián sumó a su carne. Los que el Digestor durmió. Los mil, los diez mil que descendieron antes de que tú abrieras los ojos por primera vez en el Santuario.",
+    "«¿Crees ser el primero?» — su voz es el silencio entre latido y latido. — «Sois una rueda. Yo os muelo y os devuelvo, muelo y devuelvo. Habéis muerto aquí más veces de las que vuestro idioma sabe contar. Cada uno pensó que era distinto. Cada uno alimentó el siguiente giro.»",
+    "Y sería verdad — lo fue mil veces — si estuvieras solo. Pero no lo estás. Llegaste hasta aquí porque cada Eco caído te dejó un paso, un arma, una nota, un mapa trazado con su propia muerte. Por primera vez, el Corazón DUDA: no tiene delante a un hombre terco. Tiene delante a una sucesión. Y una sucesión, a diferencia de un hombre, no se cansa, no se rinde, y no olvida lo que aprendió el que cayó antes.",
+    "«Entonces os moleré a todos a la vez», ruge la herida. Y por fin — por fin — eso ya no es una condena. Es una invitación. Que vengan todos. Que estén todos. Aquí. Ahora. Contigo."
+  ]
 };
-DATA.BOSS_DEPTHS = {4:"guardian_fauces", 8:"digestor"};
-DATA.FINAL_DEPTH = 12;
+// Profundidades de los jefes, alineadas con las zonas de expedición (ZONE_DEPTH=5).
+// El Guardián custodia el paso hondo de las Minas (zona 2); el Digestor, el del
+// Bosque (zona 4); y el Corazón aguarda al fondo del Cementerio (zona 6, prof 16),
+// la última zona "de la historia" antes del endgame. Cada uno es requisito para
+// abrir zonas posteriores, así que el recorrido es: sube de nivel, sobrevive, mata
+// al guardián de turno, y solo entonces se abre el siguiente tramo hacia el Corazón.
+DATA.BOSS_DEPTHS = {6:"guardian_fauces", 12:"digestor"};
+DATA.FINAL_DEPTH = 16;
 Object.assign(DATA.creatureAnatomy, {guardian_fauces:"jefe", digestor:"jefe", corazon_anomalia:"jefe"});
 
 // ---------- ÁRBOLES DE TALENTOS (elige 1 en cada Ascenso) ----------
@@ -5676,6 +5709,90 @@ function loadGraveyard(){
     return JSON.parse(ls.getItem(_sk('amsalor_graveyard'))||'[]');
   }catch(e){ return []; }
 }
+
+// ═══ CADÁVER FÍSICO DEL ECO (estilo "recupera tu botín donde caíste") ═══
+// Cuando un Eco muere en una incursión, deja un cadáver en el PISO donde cayó,
+// con el equipo y las esquirlas que llevaba. El siguiente Eco puede bajar a ese
+// piso, encontrar el cadáver y recuperarlo todo. Vive por ranura en
+// 'amsalor_ecocorpse'. Solo se guarda 1 (el más reciente): si mueres otra vez
+// sin recuperarlo, el anterior se pierde (como en los soulslike).
+function saveEcoCorpse(p, items){
+  try{
+    let ls=safeStorage(); if(!ls)return;
+    // no dejar cadáver si moriste en el propio Santuario (piso 0)
+    if(G.depth<=0) { ls.removeItem(_sk('amsalor_ecocorpse')); return; }
+    let corpse={
+      name:p.name, depth:G.depth,
+      tier:(G.incursion&&G.incursion.tier)||null,
+      base:(G.incursion&&G.incursion.base)||null,
+      x:p.x, y:p.y,
+      gold:p.gold||0,
+      items:(items||[]).slice(),
+      cause:(G.deathCause||'devorado por el Limbo'),
+      when:Date.now()
+    };
+    ls.setItem(_sk('amsalor_ecocorpse'), JSON.stringify(corpse));
+  }catch(e){}
+}
+function loadEcoCorpse(){
+  try{ let ls=safeStorage(); if(!ls)return null;
+    let raw=ls.getItem(_sk('amsalor_ecocorpse')); return raw?JSON.parse(raw):null;
+  }catch(e){ return null; }
+}
+function clearEcoCorpse(){
+  try{ let ls=safeStorage(); if(ls) ls.removeItem(_sk('amsalor_ecocorpse')); }catch(e){}
+}
+window.saveEcoCorpse=saveEcoCorpse; window.loadEcoCorpse=loadEcoCorpse; window.clearEcoCorpse=clearEcoCorpse;
+
+// ═══ BITÁCORA DEL ECO (notas del jugador con etiquetas) ═══
+// Un cuaderno que el JUGADOR escribe a mano: anota lo que descubre (un bioma
+// peligroso, dónde vio un tesoro, qué enemigo resiste al fuego…) usando etiquetas.
+// Persiste por ranura en 'amsalor_notes', así que SOBREVIVE a la muerte: el
+// siguiente Eco de la sucesión hereda todo lo que apuntaron los anteriores, y
+// puede consultarlo para avanzar. Distinto del Diario automático de hitos.
+const NOTE_TAGS = [
+  {id:'lugar',   label:'Lugar',   glyph:'⌖', color:'--cyan'},
+  {id:'enemigo', label:'Enemigo', glyph:'☠', color:'--red-bright'},
+  {id:'peligro', label:'Peligro', glyph:'⚠', color:'--amber-glow'},
+  {id:'tesoro',  label:'Tesoro',  glyph:'◈', color:'--gold'},
+  {id:'pista',   label:'Pista',   glyph:'✦', color:'--violet-bright'},
+  {id:'npc',     label:'Gente',   glyph:'☺', color:'--green'},
+  {id:'receta',  label:'Receta',  glyph:'⚗', color:'--amber'}
+];
+window.NOTE_TAGS=NOTE_TAGS;
+function loadNotes(){
+  try{ let ls=safeStorage(); if(!ls)return [];
+    return JSON.parse(ls.getItem(_sk('amsalor_notes'))||'[]');
+  }catch(e){ return []; }
+}
+function saveNotes(arr){
+  try{ let ls=safeStorage(); if(ls) ls.setItem(_sk('amsalor_notes'), JSON.stringify(arr||[])); }catch(e){}
+}
+function addNote(text, tags){
+  text=(''+(text||'')).trim();
+  if(!text) return false;
+  let arr=loadNotes();
+  arr.unshift({
+    text:text.slice(0,280),
+    tags:(tags||[]).slice(0,4),
+    depth:(G&&G.depth)||0,
+    day:(typeof worldDay==='function')?worldDay():0,
+    biome:(G&&G.map&&G.map.biome)||'',
+    eco:(G&&G.player&&G.player.name)||'',
+    when:Date.now()
+  });
+  if(arr.length>120) arr=arr.slice(0,120);
+  saveNotes(arr);
+  return true;
+}
+function deleteNote(idx){
+  let arr=loadNotes();
+  if(idx>=0&&idx<arr.length){ arr.splice(idx,1); saveNotes(arr); }
+}
+window.loadNotes=loadNotes; window.saveNotes=saveNotes; window.addNote=addNote; window.deleteNote=deleteNote;
+window.escapeHtml = window.escapeHtml || function(s){ return (''+s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+
+
 function consumeGraveyardPart(bodyIdx, partKey){
   try{
     let ls=safeStorage(); if(!ls)return;
@@ -6758,14 +6875,28 @@ function populateLevel(depth){
   // SALA DE PORTAL: teletransporta a otra sala del nivel
   let portalR=rooms.find(r=>r.type==='portal');
   if(portalR){ let c=takeCenter(portalR); if(c) G.features.push({x:c[0],y:c[1],type:'portal',used:false}); }
-  // LLAVE DE LA SALIDA (final bueno): rara, en pisos profundos antes del Corazón
-  if(depth>=8 && depth<(DATA.FINAL_DEPTH||12) && !(G.endingFlags&&G.endingFlags.hasExitKey) && rchance(0.30)){
-    let anyRoom=rooms[rooms.length-1]||rooms[0];
-    if(anyRoom){ let c=takeCenter(anyRoom)||take(anyRoom);
-      if(c) G.features.push({x:c[0],y:c[1],type:'exit_key',taken:false}); }
+  // FRAGMENTOS DE LA LLAVE (sendero del final BUENO): 3 piezas dispersas en los
+  // pisos profundos (prof. 12+). Al reunir las 3 se forja la Llave en el Santuario.
+  { let ks=(typeof _keyShards==='function')?_keyShards():0;
+    let alreadyHere=(G.features||[]).some(f=>f.type==='key_shard');
+    if(depth>=12 && depth<(DATA.FINAL_DEPTH||16) && ks<3 && !alreadyHere && rchance(0.32)){
+      let anyRoom=rooms[rooms.length-1]||rooms[0];
+      if(anyRoom){ let c=takeCenter(anyRoom)||take(anyRoom);
+        if(c) G.features.push({x:c[0],y:c[1],type:'key_shard',taken:false}); }
+    }
+  }
+  // VERDADES DE AMSALOR (sendero secreto del TESTIGO): 3 fragmentos de lore muy
+  // raros, en las zonas más profundas. Revelan qué es de verdad la anomalía.
+  { let tf=(typeof _truthsFound==='function')?_truthsFound():0;
+    let alreadyHere=(G.features||[]).some(f=>f.type==='truth_shard');
+    if(depth>=10 && tf<3 && !alreadyHere && rchance(0.16)){
+      let anyRoom=rooms.find(r=>r.type!=='entrance')||rooms[0];
+      if(anyRoom){ let c=takeCenter(anyRoom)||take(anyRoom);
+        if(c) G.features.push({x:c[0],y:c[1],type:'truth_shard',taken:false}); }
+    }
   }
   // ALTAR DEL CORAZÓN (final desesperanza): solo en el piso del jefe final
-  if(depth>=(DATA.FINAL_DEPTH||12)){
+  if(depth>=(DATA.FINAL_DEPTH||16)){
     let altarRoom=rooms.find(r=>r.type!=='entrance')||rooms[0];
     if(altarRoom){ let c=take(altarRoom);
       if(c) G.features.push({x:c[0],y:c[1],type:'heart_altar',used:false}); }
@@ -8152,6 +8283,7 @@ function renderMapNow(){
         if(featAt[key]){
           let f=featAt[key];
           if(f.type==='void_relic'){ row+=span(f.glyph||'✦', f.col||'--ink-bright', true); continue; }
+          if(f.type==='eco_corpse'){ row+=span(f.looted?'☠︎':'⚰', f.looted?'--ink-dim':'--amber-glow', !f.looted); continue; }
           if(f.type==='corpse'){ row+=span('☠︎', f.looted?'--ink-dim':'--ink-bright'); continue; }
           if(f.type==='prop'){ row+=span(f.glyph||'▪','--ink-dim'); continue; }
           if(f.type==='plant'){ row+=span('❀','--green'); continue; }
@@ -8175,12 +8307,15 @@ function renderMapNow(){
           else if(f.type==='forge') row+=span('⚒︎', '--ink-bright');
           else if(f.type==='craft_table') row+=span('⚙', '--ink-bright');
           else if(f.type==='quest_board') row+=span('▤', '--gold');
+          else if(f.type==='destiny_board') row+=span('✧', '--violet-bright', true);
           else if(f.type==='study') row+=span('❦', '--violet');
           else if(f.type==='safe_campfire') row+=span(f.used?'✧':'⌂︎', f.used?'--ink-dim':'--green', !f.used);
           else if(f.type==='portal') row+=span('◎', f.used?'--ink-dim':'--cyan', !f.used);
           else if(f.type==='rune_button') row+=span(f.pressed?'◉':'◈', f.pressed?'--amber-glow':'--violet');
           else if(f.type==='puzzle_chest') row+=span(f.opened?'⊡':'▤', f.opened?'--ink-dim':'--violet');
           else if(f.type==='exit_key') row+=span(f.taken?'·':'⚷︎', f.taken?'--ink-dim':'--gold', !f.taken);
+          else if(f.type==='key_shard') row+=span(f.taken?'·':'◈', f.taken?'--ink-dim':'--gold', !f.taken);
+          else if(f.type==='truth_shard') row+=span(f.taken?'·':'❖', f.taken?'--ink-dim':'--violet-bright', !f.taken);
           else if(f.type==='heart_altar') row+=span('☉', '--violet-bright', !f.used);
           else if(f.type==='altar_lunar') row+=span(f.used?'☾︎':'☽︎', f.used?'--ink-dim':'--gold', !f.used);
           else { let t=tileGlyph(G.map.tiles[my][mx], mx, my); row+=span(t.ch,t.col); }
@@ -8620,9 +8755,14 @@ function onPlayerMoved(){
     else if(f.type==='forge') logMsg('⚒ BÖRK, el Herrero. Pulsa '+kbdHtml('E')+' para reparar y MEJORAR tu equipo.','sys');
     else if(f.type==='craft_table') logMsg('⚙ La mesa de crafteo. Pulsa '+kbdHtml('E')+' para fabricar.','sys');
     else if(f.type==='quest_board') logMsg('▤ El tablón de misiones. Pulsa '+kbdHtml('E')+' para ver encargos.','sys');
+    else if(f.type==='destiny_board') logMsg('✧ EL TABLÓN DE LOS DESTINOS. Pulsa '+kbdHtml('E')+' para ver los caminos hacia los finales y tu progreso.','sys');
     else if(f.type==='study') logMsg('❦ El estudio arcano. Pulsa '+kbdHtml('E')+' para examinar pergaminos.','sys');
     else if(f.type==='trap'&&!f.armed) logMsg('Los restos de una trampa ya disparada.','flavor');
     else if(f.type==='plant') logMsg('❀ Una planta útil crece aquí. Pulsa '+kbdHtml('E')+' para recogerla.','sys');
+    else if(f.type==='eco_corpse'&&!f.looted) logMsg('⚰ Los restos de '+(f.ecoName||'tu Eco anterior')+'. Pulsa '+kbdHtml('E')+' para recuperar lo que llevaba.','sys');
+    else if(f.type==='key_shard'&&!f.taken) logMsg('◈ Un FRAGMENTO DE LA LLAVE brilla, tibio. Pulsa '+kbdHtml('E')+' para tomarlo. (Reúne 3 para forjar la Llave de la Salida.)','sys');
+    else if(f.type==='truth_shard'&&!f.taken) logMsg('❖ Algo susurra una VERDAD desde el centro de la sala. Pulsa '+kbdHtml('E')+' para escucharla.','sys');
+    else if(f.type==='exit_key'&&!f.taken) logMsg('⚷︎ Una LLAVE de hueso y obsidiana late débilmente. Pulsa '+kbdHtml('E')+' para tomarla.','sys');
     else if(f.type==='corpse'&&!f.looted) logMsg('☠︎ Restos de un devorado. Pulsa '+kbdHtml('E')+' para registrarlos.','sys');
     else if(f.type==='altar_profano'&&!f.used) logMsg('♁ Un altar PROFANADO. Rezar aquí es una apuesta… Pulsa '+kbdHtml('E')+' si te atreves.','bad');
     else if(f.type==='void_relic'){
@@ -9381,6 +9521,87 @@ Game.openJournal=function(){
   openModal('◈ DIARIO DEL DESCENSO', html, [{label:'Cerrar', action:'close'}]);
 };
 
+// ═══ INTERFAZ DE LA BITÁCORA DEL ECO (#5) ═══
+// Modal donde el jugador LEE lo que anotaron los Ecos anteriores (heredado por la
+// sucesión) y ESCRIBE notas nuevas con etiquetas. Funciona en teléfono y PC: usa
+// un <textarea> normal y botones de etiqueta tocables. Las notas viajan con la
+// ranura (amsalor_notes) y sobreviven a la muerte del Eco.
+Game._noteTagSel = [];   // etiquetas seleccionadas para la nota en curso
+Game.openNotes=function(filterTag){
+  let notes=(typeof loadNotes==='function')?loadNotes():[];
+  Game._noteFilter = (filterTag!==undefined) ? filterTag : (Game._noteFilter||null);
+  let f=Game._noteFilter;
+  let TAGS=(typeof NOTE_TAGS!=='undefined')?NOTE_TAGS:[];
+  let esc=(window.escapeHtml)||function(s){return (''+s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  let html='<div class="small c-dim mb" style="line-height:1.6">Tu bitácora personal. Lo que anotes aquí lo heredará el próximo Eco de tu sucesión — apunta lugares, peligros, enemigos y pistas para avanzar. Distinta del Diario de hitos (automático).</div>';
+  html+='<div style="border:1px solid var(--amber);padding:8px;margin-bottom:10px;border-radius:4px">';
+  html+='<textarea id="note-input" maxlength="280" rows="2" placeholder="Escribe una nota… (p. ej. «el pantano del piso 3 tiene larvas que temen al fuego»)" style="width:100%;box-sizing:border-box;padding:8px;background:var(--bg);border:1px solid var(--line-bright);color:var(--ink-bright);font-family:inherit;font-size:13px;resize:vertical"></textarea>';
+  html+='<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px">';
+  for(let t of TAGS){
+    let on=Game._noteTagSel.indexOf(t.id)>=0;
+    let col=t.color.replace('--','');
+    html+='<span class="note-tag-btn" data-tag="'+t.id+'" onclick="Game.toggleNoteTag(\''+t.id+'\')" style="cursor:pointer;user-select:none;font-size:11px;padding:3px 8px;border-radius:10px;border:1px solid var(--'+col+');'+(on?('background:var(--'+col+');color:#0c0b08'):('color:var(--'+col+')'))+'">'+t.glyph+' '+t.label+'</span>';
+  }
+  html+='</div>';
+  html+='<div style="text-align:right;margin-top:8px"><span class="cmd" onclick="Game.submitNote()" style="cursor:pointer;padding:5px 14px;background:var(--amber);color:#0c0b08;border-radius:4px;font-weight:bold">✎ Anotar</span></div>';
+  html+='</div>';
+  html+='<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;align-items:center">';
+  html+='<span class="small c-dim">Filtrar:</span>';
+  html+='<span class="note-filt" onclick="Game.openNotes(null)" style="cursor:pointer;font-size:10px;padding:2px 7px;border-radius:9px;border:1px solid var(--line-bright);'+(!f?'background:var(--line-bright);color:var(--bg)':'color:var(--ink-dim)')+'">todas</span>';
+  for(let t of TAGS){
+    let on=(f===t.id); let col=t.color.replace('--','');
+    html+='<span class="note-filt" onclick="Game.openNotes(\''+t.id+'\')" style="cursor:pointer;font-size:10px;padding:2px 7px;border-radius:9px;border:1px solid var(--'+col+');'+(on?('background:var(--'+col+');color:#0c0b08'):('color:var(--'+col+')'))+'">'+t.glyph+'</span>';
+  }
+  html+='</div>';
+  let anyShown=notes.some(nt=>!f || (nt.tags&&nt.tags.indexOf(f)>=0));
+  if(!anyShown){
+    html+='<div class="small c-dim" style="text-align:center;padding:14px;font-style:italic">'+(notes.length?'Ninguna nota con esa etiqueta.':'Aún no hay notas. Escribe la primera arriba.')+'</div>';
+  } else {
+    html+='<div style="max-height:40vh;overflow-y:auto">';
+    for(let i=0;i<notes.length;i++){
+      let nt=notes[i];
+      if(f && !(nt.tags&&nt.tags.indexOf(f)>=0)) continue;
+      let tagHtml=(nt.tags||[]).map(tid=>{ let t=TAGS.find(x=>x.id===tid); return t?('<span style="color:var('+t.color+');font-size:10px" title="'+t.label+'">'+t.glyph+'</span>'):''; }).join(' ');
+      let bioma=(nt.biome&&DATA.biomes[nt.biome])?DATA.biomes[nt.biome].name:(nt.biome||'');
+      let meta=[];
+      if(nt.eco) meta.push(esc(nt.eco));
+      if(nt.depth) meta.push('piso '+nt.depth);
+      if(bioma) meta.push(bioma);
+      html+='<div style="border-bottom:1px solid var(--line);padding:7px 0;display:flex;justify-content:space-between;gap:8px">';
+      html+='<div style="flex:1"><div style="font-size:13px;color:var(--ink-bright);line-height:1.5">'+tagHtml+' '+esc(nt.text)+'</div>';
+      if(meta.length) html+='<div class="small c-dim" style="margin-top:2px;font-size:10px">'+meta.join(' · ')+'</div>';
+      html+='</div>';
+      html+='<span onclick="Game.removeNote('+i+')" style="cursor:pointer;color:var(--red);font-size:12px;flex:0 0 auto" title="Borrar">✕</span>';
+      html+='</div>';
+    }
+    html+='</div>';
+  }
+  openModal('❦ BITÁCORA DEL ECO', html, [{label:'◂ Cerrar', action:'close'}], {wide:true});
+};
+Game.toggleNoteTag=function(tid){
+  let i=Game._noteTagSel.indexOf(tid);
+  if(i>=0) Game._noteTagSel.splice(i,1);
+  else { if(Game._noteTagSel.length<4) Game._noteTagSel.push(tid); }
+  let inp=document.getElementById('note-input');
+  let saved=inp?inp.value:'';
+  Game.openNotes(Game._noteFilter);
+  let inp2=document.getElementById('note-input'); if(inp2){ inp2.value=saved; try{inp2.focus();}catch(e){} }
+};
+Game.submitNote=function(){
+  let inp=document.getElementById('note-input');
+  if(!inp) return;
+  let txt=inp.value||'';
+  if(!txt.trim()) return;
+  if(typeof addNote==='function') addNote(txt, Game._noteTagSel.slice());
+  Game._noteTagSel=[];
+  if(typeof sfx==='function') sfx('uiConfirm');
+  Game.openNotes(Game._noteFilter);
+};
+Game.removeNote=function(idx){
+  if(typeof deleteNote==='function') deleteNote(idx);
+  Game.openNotes(Game._noteFilter);
+};
+
 </script>
 <script>
 /* ===== combat.js ===== */
@@ -9443,23 +9664,63 @@ function intMaxKrosLevel(){
 }
 window.intReqForSpell=intReqForSpell; window.intCanLearn=intCanLearn; window.intMaxKrosLevel=intMaxKrosLevel;
 
+// ═══ LA MEDIDA DEL EJE TÁCTICO ═══
+// El eje de combate tiene 11 posiciones (0–10). Cada punto equivale a ~1.5 metros
+// de distancia real (un "paso" del Limbo). Así 0 = cuerpo a cuerpo, 10 ≈ 15 m.
+// Esta función traduce una posición del eje a su medida, para mostrarla al jugador.
+const AXIS_METERS_PER_STEP = 1.5;
+function axisMeters(pos){ return Math.round(pos*AXIS_METERS_PER_STEP*10)/10; }
+function axisRangeLabel(min,max){
+  if(max<=1) return 'cuerpo a cuerpo';
+  if(min<=0) return 'hasta '+axisMeters(max)+' m';
+  return axisMeters(min)+'–'+axisMeters(max)+' m';
+}
+window.axisMeters=axisMeters; window.axisRangeLabel=axisRangeLabel;
+
+// COMPRESIÓN DEL ALCANCE MÁGICO: el `range` crudo de los datos (0–10) se comprime
+// a un eje más corto, porque a plena escala los hechizos "cruzaban" toda la sala y
+// se sentían larguísimos. La nueva escala:
+//   toque → 0–1 (adyacente) · corto → 0–3 · medio → 0–5 · largo → 0–7 (tope).
+// El daño ya decae con la distancia (falloff), así que acortar el alcance hace el
+// posicionamiento importante sin castrar a los magos.
+function compressSpellRange(r){
+  if(r<=1) return 1;
+  if(r<=3) return 3;   // dardos, chispas: corto
+  if(r<=5) return 4;   // proyectiles medios
+  if(r<=7) return 5;   // conjuros de alcance medio-largo
+  return 6;            // los antes 8–10: ahora tope 6 (no cruzan toda la sala)
+}
 function rangeOfSpell(s){
-  if(!s)return [0,10];
+  if(!s)return [0,6];
   if(s.reach)return s.reach;                       // override explícito
   if(s.target==='enemy'){
-    // EL ALCANCE ES EL DEL HECHIZO: un dardo básico (range 3) no llega tan lejos
-    // como una lanza térmica (range 8). Antes todo llegaba a 8 — ese era el bug.
-    let r=(s.range!=null?s.range:6);
-    // toque: cuerpo a cuerpo (0-2); proyectiles/rayos: 0 hasta su range
-    if(s.type==='toque') return [0,2];
-    return [0, Math.max(2, r)];
+    // toque: cuerpo a cuerpo (0–1); resto: 0 hasta su alcance COMPRIMIDO
+    if(s.type==='toque') return [0,1];
+    let r=(s.range!=null?s.range:5);
+    return [0, compressSpellRange(r)];
   }
   return [0,10];                                    // campo / tierra / uno mismo
 }
 function rangeOfSkill(k){
-  if(k&&k.reach)return k.reach;
-  if(k&&k.type==='attack')return rangeOfWeapon(G.player.weaponDmg());
-  return [0,10];
+  if(!k) return [0,1];
+  if(k.reach) return k.reach;                       // override explícito por habilidad
+  // habilidades que requieren arma a distancia: alcance largo (como el arco)
+  if(k.reqWeapon==='ranged' || k.needsBow){
+    return rangeOfWeapon(G.player&&G.player.weaponDmg?G.player.weaponDmg():null);
+  }
+  // ataques físicos cuerpo a cuerpo: usan el alcance del arma equipada
+  if(k.type==='attack'){
+    // si golpea a TODOS (barridos, tajos circulares): un poco de alcance de área
+    if(k.target==='all') return [0,2];
+    return rangeOfWeapon(G.player&&G.player.weaponDmg?G.player.weaponDmg():null);
+  }
+  // debuffs lanzados al enemigo (gritos, provocaciones, maldiciones): voz/gesto a
+  // media distancia, NO todo el campo
+  if(k.target==='enemy') return [0,4];
+  // buffs y curaciones sobre uno mismo o aliados: no necesitan "alcanzar" al rival
+  if(k.target==='self' || k.target==='ally' || k.target==='allies') return [0,10];
+  // por defecto: media distancia acotada (antes TODO llegaba a 10, ese era el bug)
+  return [0,4];
 }
 function enemyRange(e){
   // rango [min,max] de ataque en el eje táctico (0–10). Se mantiene ACOTADO para
@@ -9724,6 +9985,29 @@ function startCombat(triggerEnemy){
       combatLog('☍ '+cb.ref.name+' se materializa desde el CMF.','bad');
       combatLog('  '+cb.ref.echoTaunt,'flavor');
       if(typeof journalAdd==='function' && DATA.milestoneLabels) journalAdd(DATA.milestoneLabels.echo);
+      break;
+    }
+  }
+  // ═══ NARRATIVA DE JEFE: al toparte con un jefe, habla. Sus palabras tejen los
+  //     temas de la historia (desesperanza, condena, esperanza) y RECUERDAN que
+  //     los Ecos caídos antes te trajeron hasta aquí. ═══
+  for(let cb of combatants){
+    let r=cb.isEnemy&&cb.ref;
+    if(r && (r._appearLines||r.finalBoss) && !r._appearShown){
+      r._appearShown=true;
+      let lines = r._appearLines || (DATA.finalBoss&&DATA.finalBoss.onAppear) || [];
+      // contexto: cuántos Ecos han caído en esta sucesión
+      let ecosCount=0, runs=0;
+      try{ if(typeof loadSanctuary==='function'){ loadSanctuary(); ecosCount=(SAN.ecos&&SAN.ecos.length)||0; runs=SAN.runs||0; } }catch(e){}
+      combatLog('◈ '+(r.name||'El jefe')+':', 'bad');
+      for(let ln of lines) combatLog('  '+ln, 'flavor');
+      if(runs>0){
+        combatLog('  ('+runs+' Eco(s) de tu sucesión han descendido antes que tú. Su recorrido es el tuyo.)', 'sys');
+      }
+      // EL JEFE FINAL revela la Comunión: el poder de convocar a toda la sucesión
+      if(r.finalBoss){
+        combatLog('✷ Sientes, por primera vez, que puedes LLAMARLOS. Una COMUNIÓN — todos los Ecos de tu sucesión, en un solo golpe. (Búscala en tus acciones de combate.)', 'magic');
+      }
       break;
     }
   }
@@ -11126,6 +11410,18 @@ function handleEnemyDeath(tc){
   if(typeof questKillProgress==='function' && tc&&tc.ref) questKillProgress(tc.ref.id);
   // progreso de misiones de JEFE
   if(tc&&tc.ref&&tc.ref.boss && typeof questBossProgress==='function') questBossProgress();
+  // REGISTRAR EL JEFE DERROTADO en el Santuario: ciertas zonas exigen haber
+  // matado a un jefe concreto para abrirse. Persiste en la sucesión.
+  if(tc&&tc.ref&&(tc.ref.boss||tc.ref.finalBoss)&&tc.ref.id){
+    try{ if(typeof loadSanctuary==='function') loadSanctuary();
+      SAN.bossesSlain=SAN.bossesSlain||{};
+      if(!SAN.bossesSlain[tc.ref.id]){
+        SAN.bossesSlain[tc.ref.id]=true;
+        if(typeof saveSanctuary==='function') saveSanctuary();
+        combatLog('◈ Has derrotado a un guardián de la anomalía. Su caída abre caminos que estaban sellados.','sys');
+      }
+    }catch(e){}
+  }
   // el caído deja su CADÁVER en el mapa: se puede registrar y DESHUESAR (cazar para comer)
   if(tc&&tc.ref&&!tc.ref.ally&&!tc.ref.hidden){
     let _e=tc.ref;
@@ -11147,6 +11443,14 @@ function handleEnemyDeath(tc){
   if(window.combatFX && combatFX.death){ let _did=cbidOf(e); if(_did>=0) combatFX.death(_did); }
   e.alive=false; e.hp=0;
   combatLog('☠︎ '+e.name+' es aniquilado.','good');
+  // ═══ NARRATIVA DE MUERTE DE JEFE: sus últimas palabras cierran su tema y
+  //     subrayan que la caída de los Ecos previos sirvió para llegar aquí. ═══
+  {
+    let bdef=(DATA.miniBosses||[]).find(b=>b.id===e.id);
+    if(bdef && bdef.onDeath && bdef.onDeath.length){
+      for(let ln of bdef.onDeath) combatLog('  '+ln, 'flavor');
+    }
+  }
   // OBJETIVO de incursión: cada muerte cuenta
   if(G.incursion&&G.incursion.objectives){
     let ob=G.incursion.objectives.find(o=>o.type==='kill'&&!o.done);
@@ -11832,7 +12136,9 @@ function renderExploreActions(){
   if(f&&f.type==='forge') html+=`<span class="cmd" onclick="Game.interact()"><span class="key">E</span> ⚒ Forja</span>`;
   if(f&&f.type==='craft_table') html+=`<span class="cmd" onclick="Game.interact()"><span class="key">E</span> ⚙ Craftear</span>`;
   if(f&&f.type==='quest_board') html+=`<span class="cmd" onclick="Game.interact()"><span class="key">E</span> ▤ Misiones</span>`;
+  if(f&&f.type==='destiny_board') html+=`<span class="cmd" onclick="Game.interact()"><span class="key">E</span> ✧ Destinos</span>`;
   if(f&&f.type==='study') html+=`<span class="cmd" onclick="Game.interact()"><span class="key">E</span> ❦ Estudio</span>`;
+  if(f&&f.type==='eco_corpse'&&!f.looted) html+=`<span class="cmd" onclick="Game.interact()"><span class="key">E</span> ⚰ Recuperar restos</span>`;
 
   // standard actions
   html+=`<span class="cmd" onclick="Game.rest()"><span class="key">R</span> Descansar</span>`;
@@ -13095,6 +13401,41 @@ Game.interact=function(){
     else if(phase&&phase.id==='nueva'){ p.statuses.stealth={turns:15}; logMsg('  ● La luna nueva te ENVUELVE en su ausencia (sigilo, 15 turnos).','magic'); }
     else { p.statuses.focus={turns:15}; logMsg('  ☄︎ El firmamento te concede FOCO (15 turnos).','magic'); }
     updateUI(); renderMap();
+  } else if(f.type==='key_shard'){
+    if(f.taken){ logMsg('Ya recogiste este fragmento.','flavor'); return; }
+    f.taken=true;
+    try{ if(typeof loadSanctuary==='function') loadSanctuary(); }catch(e){}
+    SAN.keyShards=(SAN.keyShards||0)+1;
+    discoverDestiny('bueno');
+    if(typeof saveSanctuary==='function') saveSanctuary();
+    logMsg('◈ Un FRAGMENTO DE LA LLAVE — hueso y obsidiana, tibio, latiendo apenas. Tienes '+SAN.keyShards+' de 3.','sys');
+    if(SAN.keyShards>=3){
+      logMsg('  ✦ Ya tienes los tres fragmentos. Fórjalos en el YUNQUE del Santuario para crear la Llave de la Salida.','good');
+    } else {
+      logMsg('  (Reúne los 3 fragmentos y fórjalos en el Santuario. Abren lo que el Limbo cerró: el camino al final «El que escapó».)','flavor');
+    }
+    updateUI(); renderMap();
+  } else if(f.type==='truth_shard'){
+    if(f.taken){ logMsg('Ya leíste esta verdad.','flavor'); return; }
+    f.taken=true;
+    try{ if(typeof loadSanctuary==='function') loadSanctuary(); }catch(e){}
+    SAN.truthsFound=SAN.truthsFound||[];
+    // texto de la verdad según cuántas lleves (revelan el mecanismo por partes)
+    const TRUTHS=[
+      'PRIMERA VERDAD: «La Lanza de Nocturnis no mató a Kael. Lo ATASCÓ. El mártir sigue aquí, girando, y su dolor es el motor de la rueda.»',
+      'SEGUNDA VERDAD: «El Limbo no devuelve Ecos por crueldad. Los recicla porque NECESITA voluntad para seguir girando. Cada Eco que baja lo alimenta un poco más.»',
+      'TERCERA VERDAD: «El Corazón no es el enemigo: es el eje. Destruirlo dentro de una sola vuelta solo mueve la rueda. Para PARARLA hay que haberla visto girar entera, muchas veces, y golpear sabiendo.»'
+    ];
+    let idx=Math.min(SAN.truthsFound.length, TRUTHS.length-1);
+    if(SAN.truthsFound.length<3) SAN.truthsFound.push(idx);
+    discoverDestiny('testigo');
+    if(typeof saveSanctuary==='function') saveSanctuary();
+    logMsg('❖ UNA VERDAD DE AMSALOR se graba en tu Núcleo. ('+SAN.truthsFound.length+' de 3)','magic');
+    logMsg('  '+TRUTHS[idx],'flavor');
+    if(SAN.truthsFound.length>=3){
+      logMsg('  ✦ Conoces las tres Verdades. Ahora sabes qué es la rueda. Un cuarto destino se ha revelado en el Tablón.','good');
+    }
+    updateUI(); renderMap();
   } else if(f.type==='exit_key'){
     if(f.taken){ logMsg('Ya tomaste la Llave.','flavor'); return; }
     f.taken=true;
@@ -13104,6 +13445,7 @@ Game.interact=function(){
     logMsg('  (Guárdala. Si destruyes el Corazón conservando la cordura, quizá rompas el ciclo y encuentres la salida.)','flavor');
     updateUI(); renderMap();
   } else if(f.type==='heart_altar'){
+    G.endingFlags=G.endingFlags||{}; G.endingFlags.foundHeartAltar=true;
     if(f.used){ logMsg('El altar guarda silencio. Ya escuchó tu elección.','flavor'); return; }
     // comulgar con el Corazón: camino al final de desesperanza (peligroso)
     openModal('☉ EL ALTAR DEL CORAZÓN', `<div class="small" style="line-height:1.7">
@@ -13191,6 +13533,8 @@ Game.interact=function(){
   } else if(f.type==='quest_board'){
     if(!f.offers) f.offers=generateQuests(G.depth);
     openQuestBoard(f);
+  } else if(f.type==='destiny_board'){
+    Game.openDestinyBoard();
   } else if(f.type==='study'){
     if(!f.scrolls){
       let pool=(DATA.scrolls||[]).filter(s=>s.lvl<=Math.min(2+Math.floor(G.depth/3),5));
@@ -13198,8 +13542,21 @@ Game.interact=function(){
       for(let i=0;i<3&&pool.length;i++) f.scrolls.push(pool.splice(Math.floor(G.rng()*pool.length),1)[0].id);
     }
     openStudy(f);
+  } else if(f.type==='eco_corpse'){
+    if(f.looted){ logMsg('Los restos ya están vacíos. Tu Eco anterior no guarda más secretos.','flavor'); return; }
+    let n=0;
+    for(let it of (f.loot||[])){
+      addToInventory({kind:it.kind, id:it.id, qty:it.qty||1});
+      n+=(it.qty||1);
+    }
+    if(f.gold>0){ G.player.gold=(G.player.gold||0)+f.gold; }
+    f.looted=true;
+    // el cadáver ya no vuelve: se limpia el registro guardado
+    if(typeof clearEcoCorpse==='function') clearEcoCorpse();
+    logMsg('⚰ Recuperas los restos de '+(f.ecoName||'tu Eco anterior')+': '+n+' objeto(s)'+(f.gold>0?(' y '+f.gold+' esquirlas'):'')+'. Su legado vuelve a tus manos.','loot');
+    if(typeof sfx==='function') sfx('pickup');
+    updateUI(); renderMap();
   } else if(f.type==='campfire'){
-    openCampfire();
   } else if(f.type==='stairs_down'){
     Game.descend();
   } else if(f.type==='stairs_up'){
@@ -13399,6 +13756,20 @@ function openForge(){
   html+=`<div class="small c-dim mt">Esquirlas: <span class="c-gold">${p.gold}</span></div>`;
   let btns=[{label:'Cerrar',action:'close'}];
   if(_thetaBtn) btns.unshift(_thetaBtn);
+  // FORJAR LA LLAVE DE LA SALIDA: si reuniste los 3 fragmentos y no la tienes aún
+  { let ks=0; try{ if(typeof loadSanctuary==='function'){ loadSanctuary(); ks=SAN.keyShards||0; } }catch(e){}
+    let has=(G.endingFlags&&G.endingFlags.hasExitKey);
+    if(ks>=3 && !has){
+      btns.unshift({label:'✦ FORJAR la Llave de la Salida', action:()=>{
+        G.endingFlags=G.endingFlags||{}; G.endingFlags.hasExitKey=true;
+        try{ if(typeof loadSanctuary==='function') loadSanctuary(); SAN.keyShards=0; if(typeof saveSanctuary==='function') saveSanctuary(); }catch(e){}
+        if(typeof journalAdd==='function' && DATA.milestoneLabels) journalAdd(DATA.milestoneLabels.exitKey);
+        logMsg('✦ BÖRK funde los tres fragmentos en el yunque. Nace LA LLAVE DE LA SALIDA — hueso, obsidiana y algo que late. Abre lo que el Limbo cerró.','magic');
+        logMsg('  (Destruye el Corazón llevándola, con la cordura entera, para el final «El que escapó».)','flavor');
+        updateUI(); openForge();
+      }});
+    }
+  }
   btns.unshift({label:'⚒ MEJORAR equipo (+N)', action:()=>Game.openSmithUpgrade()});
   btns.unshift({label:'ᛜ GRABAR runas (Telar)', action:()=>Game.openRuneForge()});
   if(_totalCost>0) btns.unshift({label:'⚒︎ Reparar todo ('+_totalCost+' esq.)', action:()=>UI.forgeRepairAll()});
@@ -14189,16 +14560,208 @@ Game.ascend=function(){
 // ═══════════════════════════════════════════════════════════════════
 // ═══ LOS DESTINOS: cada bioma es UN LUGAR de la anomalía con su dificultad.
 //     Farmeas los someros para equiparte; los profundos exigen un Eco curtido. ═══
+// Cada zona de expedición se abre con REQUISITOS combinados: un nivel mínimo del
+// Eco, haber sobrevivido a la zona anterior (extracción), y a veces una gesta
+// concreta (derrotar a cierto jefe). Esto estructura el recorrido: no puedes saltar
+// al fondo el primer día. `req` describe lo que hace falta; unlockReason() lo evalúa.
 DATA.incursionSites=[
-  {id:1, biome:'cuevas_humedas', base:2,  tier:1},
-  {id:2, biome:'minas',          base:4,  tier:2},
-  {id:3, biome:'ruinas',         base:6,  tier:3},
-  {id:4, biome:'bosque',         base:8,  tier:4},
-  {id:5, biome:'cristales',      base:10, tier:5},
-  {id:6, biome:'cementerio',     base:12, tier:6},
-  {id:7, biome:'volcanica',      base:14, tier:7},
-  {id:8, biome:'colmena',        base:16, tier:8},
+  {id:1, biome:'cuevas_humedas', base:2,  tier:1, req:{}},                                          // el umbral: siempre abierto
+  {id:2, biome:'minas',          base:4,  tier:2, req:{level:3,  prevTier:1}},
+  {id:3, biome:'ruinas',         base:6,  tier:3, req:{level:6,  prevTier:2, boss:'guardian_fauces'}},
+  {id:4, biome:'bosque',         base:8,  tier:4, req:{level:9,  prevTier:3}},
+  {id:5, biome:'cristales',      base:10, tier:5, req:{level:12, prevTier:4, boss:'digestor'}},
+  {id:6, biome:'cementerio',     base:12, tier:6, req:{level:15, prevTier:5}},
+  {id:7, biome:'volcanica',      base:14, tier:7, req:{level:18, prevTier:6}},
+  {id:8, biome:'colmena',        base:16, tier:8, req:{level:21, prevTier:7}},
 ];
+// ¿está desbloqueada la zona s? Devuelve {ok:bool, reasons:[...textos pendientes]}
+function zoneUnlockStatus(s){
+  let req=s.req||{};
+  let reasons=[];
+  let p=G.player;
+  try{ if(typeof loadSanctuary==='function') loadSanctuary(); }catch(e){}
+  // nivel del Eco
+  if(req.level){
+    let lv=(p&&p.level)||1;
+    if(lv<req.level) reasons.push('Alcanza el nivel '+req.level+' (vas por el '+lv+')');
+  }
+  // haber extraído de la zona anterior (marca de supervivencia por tier)
+  if(req.prevTier){
+    let cleared=(SAN.zonesCleared&&SAN.zonesCleared[req.prevTier]);
+    if(!cleared){
+      let prevSite=DATA.incursionSites.find(x=>x.tier===req.prevTier);
+      let pn=(prevSite&&DATA.biomes[prevSite.biome]&&DATA.biomes[prevSite.biome].name)||'la zona anterior';
+      reasons.push('Regresa con vida de «'+pn+'»');
+    }
+  }
+  // derrotar a un jefe concreto
+  if(req.boss){
+    let slain=(SAN.bossesSlain&&SAN.bossesSlain[req.boss]);
+    if(!slain){
+      let bd=(DATA.miniBosses||[]).find(b=>b.id===req.boss)||(DATA.finalBoss&&DATA.finalBoss.id===req.boss?DATA.finalBoss:null);
+      reasons.push('Derrota a '+((bd&&bd.name)||req.boss));
+    }
+  }
+  return {ok:reasons.length===0, reasons:reasons};
+}
+window.zoneUnlockStatus=zoneUnlockStatus;
+
+// ═══ EL TABLÓN DE LOS DESTINOS ═══
+// La guía maestra hacia los finales. Muestra los cuatro senderos, ordenados por
+// dificultad, con su progreso (pasos hechos), el paso ACTUAL con su instrucción, y
+// un botón para ver la pista velada de quien prefiera menos ayuda. Vive en el
+// Santuario. El jugador puede fijar UN sendero como "objetivo activo" para verlo
+// recordado en la crónica.
+Game.openDestinyBoard=function(focusPath){
+  try{ if(typeof loadSanctuary==='function') loadSanctuary(); }catch(e){}
+  let paths=Object.values(DATA.destinyPaths).sort((a,b)=>a.order-b.order);
+  let html='<div class="small c-dim mb" style="line-height:1.6">Cuatro destinos aguardan al final del descenso. Unos son un golpe directo; otros piden comprender la anomalía, o rendirse a ella. Este tablón recuerda a dónde vas y qué te falta.</div>';
+  let active=(SAN.activeDestiny)||null;
+  for(let pth of paths){
+    let prog=destinyProgress(pth.id);
+    let col=getCssVar(pth.color||'--ink-bright');
+    let pct=Math.round(100*prog.done/prog.total);
+    let isActive=(active===pth.id);
+    let discovered = pth.id==='canon' || pth.id==='bueno' || (SAN.destiniesSeen&&SAN.destiniesSeen[pth.id]) || prog.done>0;
+    // el TESTIGO (secreto) se muestra velado hasta que se descubra alguna Verdad
+    if(pth.id==='testigo' && !discovered){
+      html+=`<div class="lrow" style="display:block;opacity:0.6">
+        <div class="flex-between"><span class="nm c-dim">◉ ¿? · UN DESTINO OCULTO</span><span class="meta c-dim">secreto</span></div>
+        <div class="small c-dim" style="margin-top:2px">Hay un cuarto camino, pero la anomalía lo esconde. Solo desenterrando la verdad se revela.</div></div>`;
+      continue;
+    }
+    html+=`<div class="lrow" style="display:block;border-left:3px solid ${col}">
+      <div class="flex-between">
+        <span class="nm" style="color:${col}">${pth.glyph} ${pth.name}${prog.allDone?' <span style="color:var(--gold)">✦ LISTO</span>':''}</span>
+        <span class="meta ${isActive?'c-gold':'c-dim'}">${isActive?'◈ ACTIVO':pth.difficulty}</span>
+      </div>
+      <div class="small c-dim" style="margin:3px 0">${pth.tagline}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin:4px 0">
+        <div style="flex:1;height:6px;background:var(--bg-dim);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${col}"></div></div>
+        <span class="small c-dim">${prog.done}/${prog.total}</span>
+      </div>`;
+    // pasos: hechos (✓), actual (▸ con instrucción), futuros (velados)
+    html+='<div class="small" style="margin-top:4px;line-height:1.6">';
+    for(let i=0;i<pth.steps.length;i++){
+      let step=pth.steps[i];
+      let ok=false; try{ ok=!!step.done(); }catch(e){}
+      if(ok){
+        html+=`<div style="color:var(--green)">✓ <span class="c-dim" style="text-decoration:line-through">${step.text}</span></div>`;
+      } else if(i===prog.current){
+        html+=`<div style="color:${col}">▸ <b>${step.text}</b> <span class="cmd" style="font-size:9px;margin-left:4px" onclick="Game.showDestinyHint('${pth.id}',${i})">pista</span></div>`;
+      } else {
+        html+=`<div class="c-dim" style="opacity:0.5">○ <span style="filter:blur(0px)">${step.text}</span></div>`;
+      }
+    }
+    html+='</div>';
+    // botón para fijar/soltar como objetivo activo
+    if(!prog.allDone){
+      if(isActive){
+        html+=`<div style="margin-top:5px"><span class="cmd" style="font-size:10px" onclick="Game.setActiveDestiny(null)">◈ Dejar de seguir este destino</span></div>`;
+      } else {
+        html+=`<div style="margin-top:5px"><span class="cmd" style="font-size:10px;color:${col}" onclick="Game.setActiveDestiny('${pth.id}')">▸ Seguir este destino</span></div>`;
+      }
+    }
+    html+=`</div>`;
+  }
+  openModal('✧ EL TABLÓN DE LOS DESTINOS', html, [
+    {label:'▽ Ver el Mapa del Descenso', action:()=>{ closeModal(); Game.openDescentMap(); }},
+    {label:'◂ Cerrar', action:'close'}
+  ], {wide:true});
+};
+Game.showDestinyHint=function(pathId, stepIdx){
+  let pth=DATA.destinyPaths[pathId]; if(!pth||!pth.steps[stepIdx]) return;
+  let step=pth.steps[stepIdx];
+  logMsg('✧ Pista ('+pth.name+'): '+(step.hint||step.text),'sys');
+  // pequeño toast visual si existe
+  if(typeof toast==='function') toast(step.hint||step.text);
+};
+Game.setActiveDestiny=function(pathId){
+  try{ if(typeof loadSanctuary==='function') loadSanctuary(); }catch(e){}
+  SAN.activeDestiny=pathId;
+  if(typeof saveSanctuary==='function') saveSanctuary();
+  if(pathId){
+    let pth=DATA.destinyPaths[pathId];
+    logMsg('◈ Ahora sigues el destino: '+(pth?pth.name:pathId)+'. El tablón recordará tu paso actual.','good');
+  } else {
+    logMsg('Has dejado de seguir un destino fijo.','sys');
+  }
+  Game.openDestinyBoard();
+};
+// marcar un destino como "visto" (descubierto), p. ej. al hallar una Verdad
+function discoverDestiny(pathId){
+  try{ if(typeof loadSanctuary==='function') loadSanctuary(); }catch(e){}
+  SAN.destiniesSeen=SAN.destiniesSeen||{};
+  if(!SAN.destiniesSeen[pathId]){ SAN.destiniesSeen[pathId]=true; if(typeof saveSanctuary==='function') saveSanctuary(); }
+}
+window.discoverDestiny=discoverDestiny;
+
+// ═══ EL MAPA DEL DESCENSO ═══
+// Una vista del recorrido completo de la anomalía: las zonas en orden de
+// profundidad, los jefes que custodian el camino, y el Corazón al fondo. Da al
+// jugador una brújula narrativa: de dónde vengo, dónde estoy, qué falta para el final.
+Game.openDescentMap=function(){
+  try{ if(typeof loadSanctuary==='function') loadSanctuary(); }catch(e){}
+  let p=G.player;
+  let lv=(p&&p.level)||1;
+  let html='<div class="small c-dim mb" style="line-height:1.6">La anomalía es un pozo. Cada zona es un tramo más hondo de la misma herida. Este es tu camino hasta el Corazón — y hasta el final del ciclo.</div>';
+  // hitos de jefe intercalados con las zonas (profundidades alineadas con BOSS_DEPTHS)
+  const bossAt={6:'guardian_fauces', 12:'digestor'};
+  html+='<div style="border-left:3px solid var(--line-bright);margin-left:8px;padding-left:14px">';
+  for(let i=0;i<DATA.incursionSites.length;i++){
+    let s=DATA.incursionSites[i];
+    let bio=DATA.biomes[s.biome]||{};
+    let st=zoneUnlockStatus(s);
+    let cleared=(SAN.zonesCleared&&SAN.zonesCleared[s.tier]);
+    // marcador del tramo
+    let dot = cleared ? '<span style="color:var(--green)">◉</span>' : (st.ok ? '<span style="color:var(--amber-glow)">◉</span>' : '<span style="color:var(--ink-dim)">○</span>');
+    let nameCol = cleared ? 'var(--green)' : (st.ok ? getCssVar(bio.color||'--ink-bright') : 'var(--ink-dim)');
+    html+='<div style="margin:6px 0;position:relative">';
+    html+='<div style="position:absolute;left:-21px">'+dot+'</div>';
+    html+='<div style="color:'+nameCol+';font-weight:bold">'+(bio.name||s.biome).toUpperCase()+' <span class="small c-dim">· prof. '+s.base+'</span>'+(cleared?' <span class="small" style="color:var(--green)">✓</span>':'')+'</div>';
+    if(st.ok){
+      html+='<div class="small c-dim">'+(bio.ambient||'')+'</div>';
+    } else {
+      html+='<div class="small" style="color:var(--amber-glow)">🔒 '+st.reasons.join(' · ')+'</div>';
+    }
+    html+='</div>';
+    // ¿un jefe custodia una profundidad dentro/después de esta zona?
+    for(let d in bossAt){
+      d=parseInt(d);
+      if(d>=s.base && (i+1>=DATA.incursionSites.length || d<DATA.incursionSites[i+1].base)){
+        let bid=bossAt[d];
+        let bdef=(DATA.miniBosses||[]).find(b=>b.id===bid);
+        let slain=(SAN.bossesSlain&&SAN.bossesSlain[bid]);
+        html+='<div style="margin:6px 0 6px 0;position:relative">';
+        html+='<div style="position:absolute;left:-22px;color:'+(slain?'var(--green)':'var(--red-bright)')+'">'+(slain?'☠':'⚔')+'</div>';
+        html+='<div style="color:'+(slain?'var(--green)':'var(--red-bright)')+';font-size:12px">'+(slain?'✓ ':'')+((bdef&&bdef.name)||bid)+' <span class="small c-dim">· custodia prof. '+d+'</span></div>';
+        if(!slain && bdef&&bdef.desc) html+='<div class="small c-dim" style="font-style:italic">'+bdef.desc.slice(0,80)+'…</div>';
+        html+='</div>';
+      }
+    }
+  }
+  // el Corazón, al fondo
+  let heartDead=(G.endingFlags&&G.endingFlags.heartDestroyed)||(SAN.bossesSlain&&SAN.bossesSlain.corazon_anomalia);
+  html+='<div style="margin:10px 0 4px 0;position:relative">';
+  html+='<div style="position:absolute;left:-23px;color:var(--red-bright);font-size:14px">Ω</div>';
+  html+='<div style="color:var(--red-bright);font-weight:bold;letter-spacing:1px">EL CORAZÓN DE LA ANOMALÍA <span class="small c-dim">· prof. '+(DATA.FINAL_DEPTH||16)+'</span></div>';
+  html+='<div class="small c-dim" style="font-style:italic">El núcleo de la herida. Si muere, el ciclo puede romperse. '+(heartDead?'<span style="color:var(--gold)">— Ya lo enfrentaste.</span>':'Aún late, allá al fondo.')+'</div>';
+  html+='</div>';
+  html+='</div>';
+  // consejo de progreso: qué toca ahora
+  let nextLocked=DATA.incursionSites.find(s=>!zoneUnlockStatus(s).ok);
+  if(nextLocked){
+    let bio=DATA.biomes[nextLocked.biome]||{};
+    let st=zoneUnlockStatus(nextLocked);
+    html+='<hr class="divider"><div class="small" style="color:var(--amber);line-height:1.6">▸ Para avanzar hacia «'+(bio.name||nextLocked.biome)+'»: '+st.reasons.join(', ')+'.</div>';
+  } else {
+    html+='<hr class="divider"><div class="small" style="color:var(--gold);line-height:1.6">▸ Todas las zonas están abiertas. El camino al Corazón está despejado: desciende hasta prof. '+(DATA.FINAL_DEPTH||16)+'.</div>';
+  }
+  openModal('▽ EL MAPA DEL DESCENSO', html, [
+    {label:'▼ Ir a una incursión', action:()=>{ closeModal(); Game.openIncursionSelect(); }},
+    {label:'◂ Cerrar', action:'close'}
+  ], {wide:true});
+};
 DATA.incursionTiers=DATA.incursionSites;   // compatibilidad con guardados
 Game.openIncursionSelect=function(){
   loadSanctuary();
@@ -14207,18 +14770,20 @@ Game.openIncursionSelect=function(){
   // el CALENDARIO: hoy manda la luna
   { let moon=(typeof calMoon==='function')?calMoon():null;
     if(moon) html+='<div class="small mb" style="color:var(--violet-bright)">'+moon.icon+' Hoy: '+moon.name+' — '+moon.desc+'</div>'; }
-  let maxTier = SAN.maxZoneTier||1;   // tier máximo desbloqueado (empieza en 1)
   for(let s of DATA.incursionSites){
     let bio=DATA.biomes[s.biome]||{};
-    let unlocked = s.tier<=maxTier;
-    if(unlocked){
+    let st=zoneUnlockStatus(s);
+    if(st.ok){
+      // pista si el jugador YA limpió esta zona (para recordar cadáver, progreso)
+      let clearedTag = (SAN.zonesCleared&&SAN.zonesCleared[s.tier]) ? '<span class="small" style="color:var(--green)"> ✓ superada</span>' : '';
       html+=`<div class="lrow" style="display:block" onclick="Game.startIncursion(${s.id})">
-        <div class="flex-between"><span class="nm" style="color:${getCssVar(bio.color||'--ink-bright')}">${(bio.name||s.biome).toUpperCase()}</span><span class="meta">prof. ${s.base}</span></div>
+        <div class="flex-between"><span class="nm" style="color:${getCssVar(bio.color||'--ink-bright')}">${(bio.name||s.biome).toUpperCase()}${clearedTag}</span><span class="meta">prof. ${s.base} · nv${s.req&&s.req.level?s.req.level:1}+</span></div>
         <div class="small c-dim" style="margin-top:2px">${bio.ambient||''}</div></div>`;
     } else {
-      html+=`<div class="lrow" style="display:block;opacity:0.5;cursor:default">
+      let reqHtml=st.reasons.map(r=>'<div style="color:var(--amber-glow)">◆ '+r+'</div>').join('');
+      html+=`<div class="lrow" style="display:block;opacity:0.75;cursor:default">
         <div class="flex-between"><span class="nm c-dim">🔒 ${(bio.name||s.biome).toUpperCase()}</span><span class="meta c-dim">prof. ${s.base}</span></div>
-        <div class="small c-dim" style="margin-top:2px">Sellada. Extrae con éxito de la zona anterior para abrir esta profundidad.</div></div>`;
+        <div class="small" style="margin-top:3px">${reqHtml}</div></div>`;
     }
   }
   if(SAN.cycleUnlocked){
@@ -14229,6 +14794,7 @@ Game.openIncursionSelect=function(){
   let relN=(p._relics||[]).length;
   html+='<hr class="divider"><div class="small">☨ RELIQUIAS: '+relN+'/3 marcadas <span class="c-dim">(15 esq. c/u — si mueres, vuelven al Almacén)</span></div>';
   openModal('▼ LA BOCA DE LA ANOMALÍA', html, [
+    {label:'▽ Ver el Mapa del Descenso', action:()=>{ closeModal(); Game.openDescentMap(); }},
     {label:'☨ Marcar reliquias', action:()=>Game.openRelicPicker()},
     {label:'Cerrar', action:'close'}
   ]);
@@ -14316,13 +14882,16 @@ function placeExtractionTotem(){
   if(spot){ G.features.push({x:spot[0], y:spot[1], type:'extraction'}); }
 }
 Game.startIncursion=function(siteId){
-  // GATE DE DESBLOQUEO: no se puede saltar a una zona sellada
-  if(siteId!==99 && typeof loadSanctuary==='function'){
-    loadSanctuary();
+  // GATE DE DESBLOQUEO: no se puede saltar a una zona sellada. Se comprueban TODOS
+  // los requisitos (nivel, zona previa, jefe), no solo el tier.
+  if(siteId!==99){
     let site=DATA.incursionSites.find(s=>s.id===siteId);
-    if(site && site.tier>(SAN.maxZoneTier||1)){
-      logMsg('Esa profundidad sigue sellada. Extrae con éxito de una zona más somera para abrirla.','bad');
-      return;
+    if(site){
+      let st=zoneUnlockStatus(site);
+      if(!st.ok){
+        logMsg('Esa profundidad sigue sellada. Falta: '+st.reasons.join(' · '),'bad');
+        return;
+      }
     }
   }
   let s=DATA.incursionSites.find(x=>x.id===siteId);
@@ -14590,8 +15159,20 @@ Game._npcVigia=function(root){
   } else if(root==='kael'){
     html+=dlgLine('vigia','¿Kael? El mártir. El que murió clavado en el Monte Calbalon y volvió al tercer día. Fundó el Imperio de la Humanidad y, dicen, selló mil heridas del Gran Impacto con sus propias manos.');
     html+='<div class="small mt c-dim">«Si él volvió de la muerte para salvar al mundo… quizá un muerto como tú pueda romper una de estas heridas de una vez. Piénsalo, ahí abajo, cuando el tiempo empiece a girar.»</div>';
+  } else if(root==='destinos'){
+    html+=dlgLine('vigia','¿Cómo se sale de aquí? No hay una sola puerta, Eco. Hay varias, y ninguna es fácil. Te diré lo que he visto contar a los pocos que volvieron con algo en la cabeza.');
+    html+='<div class="small mt c-dim">«Está el camino corto: baja hasta el Corazón de la herida y destrúyelo. Rápido. Pero destruir un latido no para la rueda — la mayoría que lo hace, vuelve a caer.»</div>';
+    html+='<div class="small mt c-dim">«Está el camino de la LLAVE: dicen que la salida de verdad está cerrada, y que la anomalía dispersó su llave en tres fragmentos, bien hondo. Reúnelos, fórjalos, y destruye el Corazón cuerdo, con la llave en la mano. Ese sí abre.»</div>';
+    html+='<div class="small mt c-dim">«Está el camino oscuro: no luchar. Dejar que la locura te llene y ARRODILLARTE ante el Corazón. Te hará suyo. Serás la nueva mente de la herida. Un final… pero no para ti.»</div>';
+    let tf=(typeof _truthsFound==='function')?_truthsFound():0;
+    if(tf>0){
+      html+='<div class="small mt" style="color:var(--violet-bright)">«Y hay un cuarto camino, el que casi nadie ve. Tú ya empezaste a verlo — llevas VERDADES grabadas en el Núcleo. Reúne las tres, gira la rueda hasta comprenderla, y golpea sabiendo. Solo así se PARA del todo. Es el más largo. El más difícil. El único que libera a todos.»</div>';
+    } else {
+      html+='<div class="small mt c-dim">«Dicen que hay un cuarto camino, más hondo que los otros, para quien comprenda de verdad qué es esta rueda. Pero yo no lo he visto. Quizá tú desentierres esa verdad ahí abajo.»</div>';
+    }
+    html+='<div class="small mt" style="color:var(--gold)">▸ Consulta el TABLÓN DE LOS DESTINOS (✧) junto a la boca de la anomalía: recuerda cada camino y lo que te falta.</div>';
+    discoverDestiny('bueno'); discoverDestiny('desesperanza');
   } else {
-    html+=dlgLine('vigia','Otro Eco. El Limbo los escupe y yo los cuento. ¿Qué quieres saber antes de que el tiempo roto te tome?');
   }
   openModal('V · EL VIGÍA', html, [
     {label:'☾ ¿Qué luna manda hoy?', action:()=>Game._npcVigia('luna')},
@@ -14600,6 +15181,7 @@ Game._npcVigia=function(root){
     {label:'☩ ¿Qué es un Eco?', action:()=>Game._npcVigia('ecos')},
     {label:'‡ Háblame de Kael', action:()=>Game._npcVigia('kael')},
     {label:'¿Quién eres?', action:()=>Game._npcVigia('quien')},
+    {label:'✧ ¿Cómo salgo de aquí? (los finales)', action:()=>Game._npcVigia('destinos')},
     {label:'Marcharse', action:'close'}
   ]);
 };
@@ -14991,13 +15573,17 @@ Game.extractToSanctuary=function(){
   closeModal();
   loadSanctuary(); SAN.extractions++;
   let p=G.player;
-  // DESBLOQUEO PROGRESIVO: extraer con éxito de un tier abre el siguiente.
+  // DESBLOQUEO PROGRESIVO: extraer con éxito marca la zona como SUPERADA. La zona
+  // siguiente comprobará esto junto con el nivel y la gesta que le toque.
   { let tierActual=(G.incursion&&G.incursion.tier)||1;
+    SAN.zonesCleared = SAN.zonesCleared || {};
+    if(!SAN.zonesCleared[tierActual]){
+      SAN.zonesCleared[tierActual]=true;
+      logMsg('▼ Has regresado con vida de esta profundidad. Tu supervivencia queda registrada: acerca la siguiente zona de la anomalía.','good');
+    }
+    // compatibilidad: mantener maxZoneTier al día por si algo lo lee
     if(tierActual>=1 && tierActual<90){
       SAN.maxZoneTier = Math.max(SAN.maxZoneTier||1, tierActual+1);
-      if((SAN.maxZoneTier)===tierActual+1 && tierActual+1<=8){
-        logMsg('▼ Has demostrado que sobrevives a esta profundidad. Se abre una zona más honda de la anomalía.','good');
-      }
     }
   }
   // ── XP DE EXPLORACIÓN: volver con vida ES la victoria ──
@@ -15116,6 +15702,11 @@ function buildLevel(depth){
     { let gx=s.board[0]+2, gy=s.board[1];
       if(!isWalkable(gx,gy)) gx=s.board[0]-2;
       if(isWalkable(gx,gy)) G.features.push({x:gx,y:gy,type:'eco_grave'}); }
+    // EL TABLÓN DE LOS DESTINOS: la guía hacia los finales, junto a la boca de la anomalía
+    { let dx=s.exit[0]+2, dy=s.exit[1];
+      if(!isWalkable(dx,dy)) dx=s.exit[0]-2;
+      if(!isWalkable(dx,dy)){ dx=s.exit[0]; dy=s.exit[1]+2; }
+      if(isWalkable(dx,dy)) G.features.push({x:dx,y:dy,type:'destiny_board'}); }
     // la MESA DE AUTOPSIA: los restos de tus Ecos anteriores, listos para la Runa de la Carne
     { let ax=s.study[0], ay=s.study[1]+2;
       if(!isWalkable(ax,ay)) ay=s.study[1]-2;
@@ -15145,6 +15736,21 @@ function buildLevel(depth){
     if(!isWalkable(G.player.x,G.player.y)){ G.player.x=s.campfire[0]; G.player.y=s.campfire[1]-1; }
     for(let [x,y] of G.map.floors) G.seen[x+','+y]=true;
     logMsg('❦ EL SANTUARIO — tu anclaje en el borde de la anomalía. Prepárate, mejora la base, y cuando estés listo, cruza el PORTAL (▼) hacia una incursión.','sys');
+    // AVISO DEL CADÁVER PENDIENTE: si un Eco anterior cayó y sus restos siguen ahí
+    // abajo, recordar al jugador a dónde volver para recuperarlos.
+    if(typeof loadEcoCorpse==='function'){
+      let _c=loadEcoCorpse();
+      if(_c && _c.depth>0){
+        let _cnt=(_c.items?_c.items.length:0);
+        let _zona='';
+        if(_c.tier!=null && DATA.incursionSites){
+          let _site=DATA.incursionSites.find(x=>x.tier===_c.tier);
+          if(_site && DATA.biomes[_site.biome]) _zona=DATA.biomes[_site.biome].name;
+        }
+        let _rel = (_c.base!=null) ? (' (piso '+(_c.depth-_c.base+1)+' de esa zona)') : '';
+        logMsg('☠︎ Los restos de '+(_c.name||'tu Eco anterior')+' aún yacen en '+(_zona?('«'+_zona+'»'):'la anomalía')+_rel+', con '+_cnt+' objeto(s) y '+(_c.gold||0)+' esquirlas. Vuelve a esa incursión y desciende hasta allí para recuperarlos.','flavor');
+      }
+    }
     if(typeof tutorialHint==='function') tutorialHint('extraction_loop','Este es el nuevo ciclo: entras a una incursión, saqueas, y debes volver al punto de EXTRACCIÓN para conservar el botín. Si mueres, pierdes lo que llevabas encima — lo depositado en el ALMACÉN (⌸) está a salvo.');
     computeFOV();
     return;
@@ -15168,15 +15774,30 @@ function buildLevel(depth){
     logMsg('  '+G.mapAnomaly.warn,'flavor');
     logMsg('  '+G.mapAnomaly.desc,'sys');
   }
-  // MINI-JEFE que custodia la escalera en pisos señalados
+  // MINI-JEFE que custodia el paso hondo en pisos señalados. Se coloca junto a la
+  // escalera descendente si la hay; si es el FONDO de la zona (sin escalera), se
+  // coloca en el centro del nivel — igualmente custodia ese tramo.
   let bossId=DATA.BOSS_DEPTHS&&DATA.BOSS_DEPTHS[depth];
   if(bossId){
     let bdef=DATA.miniBosses.find(b=>b.id===bossId);
     let st=G.features.find(f=>f.type==='stairs_down');
-    if(bdef&&st){
-      let boss=makeEnemy(bdef, st.x, st.y-1>1?st.y-1:st.y+1);
+    let bx, by;
+    if(st){ bx=st.x; by=(st.y-1>1?st.y-1:st.y+1); }
+    else {
+      // fondo de zona: colocar en el centro, sobre suelo
+      bx=Math.floor(G.map.w/2); by=Math.floor(G.map.h/2);
+      let best=null,bd=1e9;
+      for(let [fx,fy] of G.map.floors){ let dd=Math.abs(fx-bx)+Math.abs(fy-by); if(dd<bd){bd=dd;best=[fx,fy];} }
+      if(best){ bx=best[0]; by=best[1]; }
+    }
+    if(bdef){
+      let boss=makeEnemy(bdef, bx, by);
       boss.aggro=false; G.enemies.push(boss);
-      logMsg('⚠ Algo enorme custodia el descenso en este piso…','bad');
+      logMsg('⚠ Algo enorme custodia este paso de la anomalía…','bad');
+      if(bdef.onAppear && bdef.onAppear.length){
+        boss._appearLines=bdef.onAppear.slice();
+        boss._appearShown=false;
+      }
     }
   }
   // JEFE FINAL en la última profundidad
@@ -15195,6 +15816,38 @@ function buildLevel(depth){
   if(G.player.passive==='clarividencia'){
     for(let [x,y] of G.map.floors) G.seen[x+','+y]=true;
     logMsg('Clarividencia: vislumbras la disposición del nivel.','magic');
+  }
+  // ═══ CADÁVER DEL ECO ANTERIOR: si el Eco previo murió en ESTE piso, sus restos
+  //     te esperan aquí, recuperables. ═══
+  if(depth>0 && typeof loadEcoCorpse==='function'){
+    let corpse=loadEcoCorpse();
+    // colocar SIEMPRE que el Eco anterior cayera en ESTE piso — aunque no llevara
+    // equipo ni esquirlas. Antes se exigía loot/oro y, si morías equipado (todo
+    // pasaba a reliquias/cementerio), el cadáver no aparecía y parecía perdido.
+    if(corpse && corpse.depth===depth){
+      // buscar una casilla de suelo cerca de donde caíste (o cualquiera libre)
+      let spot=null;
+      let occupied=(x,y)=> G.enemies.some(e=>e.alive&&e.x===x&&e.y===y) ||
+                           G.features.some(f=>f.x===x&&f.y===y);
+      // 1) intentar cerca de las coords de muerte
+      if(corpse.x!=null){
+        let ring=[[0,0],[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[2,0],[0,2]];
+        for(let [dx,dy] of ring){
+          let nx=corpse.x+dx, ny=corpse.y+dy, row=G.map.tiles[ny];
+          if(row && (row[nx]===TILE.FLOOR||row[nx]===TILE.DOOR_O) && !occupied(nx,ny)){ spot=[nx,ny]; break; }
+        }
+      }
+      // 2) si no, cualquier casilla de suelo libre
+      if(!spot){
+        for(let [fx,fy] of G.map.floors){ if(!occupied(fx,fy)){ spot=[fx,fy]; break; } }
+      }
+      if(spot){
+        G.features.push({ x:spot[0], y:spot[1], type:'eco_corpse',
+          ecoName:corpse.name||'Eco', looted:false,
+          loot:(corpse.items||[]).slice(), gold:corpse.gold||0 });
+        logMsg('☠︎ En algún lugar de este piso yacen los restos de '+(corpse.name||'tu Eco anterior')+'. Recupéralos.','sys');
+      }
+    }
   }
   computeFOV();
 }
@@ -15445,9 +16098,11 @@ function distanceBarHTML(c){
       icons+=`<span class="di ${cls}" style="left:${cb.pos*10}%;top:${topOff}px" title="${ttl}">${cb.isPlayer?'@':cb.glyph}</span>`;
     }
   }
+  let _maxM = (typeof axisMeters==='function')?axisMeters(10):15;
+  let _midM = (typeof axisMeters==='function')?axisMeters(5):7.5;
   return `<div class="dist-wrap">
     <div class="dist-track">${threat}${bands}${ticks}${icons}</div>
-    <div class="dist-lbl"><span>▓ MURO · 0</span><span class="c-dim">— DISTANCIA —</span><span>10</span></div>
+    <div class="dist-lbl"><span>▓ 0 m</span><span class="c-dim">${_midM} m</span><span>${_maxM} m</span></div>
   </div>`;
 }
 
@@ -17508,6 +18163,21 @@ function renderCombatActions(){
       html+=`<span class="cmd" style="color:var(--violet-bright)" onclick="G.combat.submenu='minion-orders';renderCombatActions()" title="Dar órdenes a tus esbirros">☗ Órdenes</span>`;
     }
   }
+  // ═══ LA COMUNIÓN DE LOS ECOS ═══ (#3)
+  // Solo contra el Corazón de la Anomalía: convoca a TODOS los Ecos caídos de tu
+  // sucesión para un golpe conjunto. Su fuerza crece con cuántos cayeron antes.
+  // Es la expresión mecánica del tema: la sucesión, no el individuo, rompe la rueda.
+  { let _finalHere=c.combatants.some(x=>x.isEnemy&&aliveCombatant(x)&&x.ref&&x.ref.finalBoss);
+    if(_finalHere){
+      let _fallen=0;
+      try{ if(typeof loadSanctuary==='function'){ loadSanctuary(); _fallen=(SAN.ecos&&SAN.ecos.length)||0; } }catch(e){}
+      if(!c._communionUsed){
+        html+=`<span class="cmd" style="color:var(--gold);border-color:var(--gold);box-shadow:0 0 8px rgba(255,190,80,0.4)" onclick="UI.cCommunion()" title="Convoca a los ${_fallen} Eco(s) de tu sucesión para un golpe conjunto. Un solo uso.">✷ COMUNIÓN DE LOS ECOS <span class="small c-dim">(${_fallen})</span></span>`;
+      } else {
+        html+=`<span class="cmd disabled" title="Ya invocaste a tu sucesión en este combate.">✷ Comunión (usada)</span>`;
+      }
+    }
+  }
   html+=`<span class="cmd danger" onclick="UI.cFlee()">H<span class="key">u</span>ir</span>`;
   bar.innerHTML=html;
 }
@@ -17667,6 +18337,58 @@ UI.cItems=function(){ G.combat.submenu='items'; renderCombatActions(); };
 UI.cDefend=function(){ combatDefend(); };
 UI.cAnalyze=function(){ combatAnalyze(); };
 UI.cFlee=function(){ combatFlee(); };
+// ═══ LA COMUNIÓN DE LOS ECOS (#3) ═══
+// Convoca a todos los Ecos caídos de tu sucesión (los del Cementerio) para un golpe
+// conjunto contra el jefe final. El daño crece con cuántos cayeron: cada Eco que
+// perdiste aporta su parte. Un solo uso por combate. Encarna el tema del juego.
+UI.cCommunion=function(){
+  let c=G.combat; if(!c||c._communionUsed) return;
+  let boss=c.combatants.find(x=>x.isEnemy&&aliveCombatant(x)&&x.ref&&x.ref.finalBoss);
+  if(!boss){ return; }
+  let fallen=[];
+  try{ if(typeof loadSanctuary==='function'){ loadSanctuary(); fallen=(SAN.ecos||[]).slice(); } }catch(e){}
+  c._communionUsed=true;
+  let n=fallen.length;
+  // daño base + aporte por cada Eco caído (escala con la sucesión). Con 0 Ecos
+  // caídos aún funciona (tu propio Eco basta para encender la comunión), pero es
+  // mucho más fuerte cuantos más te precedieron.
+  let base=Math.round((G.player.totalStat?G.player.totalStat('voluntad'):8)*4);
+  let perEco=22;
+  let dmg=base + n*perEco;
+  // narrativa del golpe conjunto
+  combatLog('✷ Alzas la mano, y el Limbo se ESTREMECE.','magic');
+  if(n>0){
+    combatLog('☩ Los '+n+' Ecos de tu sucesión emergen de las vueltas del tiempo — todos los que cayeron para que tú llegaras aquí.','magic');
+    // nombrar hasta 4 Ecos caídos, para que se sientan presentes
+    let names=fallen.map(e=>e.name).filter(Boolean).slice(0,4);
+    if(names.length) combatLog('  '+names.join(', ')+(fallen.length>names.length?' y los demás':'')+' golpean CONTIGO, a una.','flavor');
+    combatLog('«No somos un hombre», dicen a una voz. «Somos una SUCESIÓN. Y una sucesión no se cansa.»','flavor');
+  } else {
+    combatLog('☩ Tu Eco, el primero de la sucesión, concentra en un solo golpe todo lo que aún no ha sido.','magic');
+  }
+  // aplicar el daño al jefe
+  boss.ref.hp=(boss.ref.hp||0)-dmg;
+  if(boss.hp!==undefined) boss.hp=boss.ref.hp;
+  combatLog('✷ LA COMUNIÓN IMPACTA: '+dmg+' de daño al Corazón.','good');
+  if(typeof sfx==='function') sfx('critHit');
+  if(typeof spawnFloatingDamage==='function'){ try{ spawnFloatingDamage(boss, dmg, true); }catch(e){} }
+  // ¿lo mató?
+  let _bossDead=(boss.ref.hp<=0);
+  if(_bossDead){
+    boss.ref.alive=false; if(boss.alive!==undefined) boss.alive=false;
+    combatLog('El Corazón se detiene. La sucesión lo logró.','magic');
+    G.endingFlags = G.endingFlags || {};
+    G.endingFlags.communedForKill = true;   // el final reconocerá la Comunión
+    renderCombat(); renderCombatActions();
+    if(typeof checkCombatEnd==='function') checkCombatEnd();
+    else if(typeof endCombat==='function') endCombat('win');
+    return;   // el combate terminó: no avanzar el turno
+  }
+  // gasta el turno del jugador (patrón estándar)
+  let me=c.combatants.find(x=>x.isPlayer); if(me) me.atb=0;
+  c.playerReady=false; c.mode='waiting'; c.submenu=null; c.busy=false;
+  renderCombat(); renderCombatActions();
+};
 UI.combatBack=function(){ G.combat.submenu=null; G.combat.mode='menu'; G.combat.pendingAction=null; G.combat.attackTarget=null; G.combat.pendingRange=null; renderCombatActions(); renderCombat(); };
 
 UI.pickSkill=function(id){
@@ -18439,10 +19161,17 @@ Game._dbgFreeSpotNear=function(x,y){
 
 // ═══ SELECTOR DE 3 RANURAS DE GUARDADO ═══
 Game.openSlotSelect=function(){
-  let html='<div class="small c-dim mb" style="line-height:1.7">Tres ranuras, tres historias. Cada Eco lleva su propio Santuario, su propio progreso. Elige dónde jugar.</div>';
+  let html='<div class="small c-dim mb" style="line-height:1.7">Tres ranuras, tres historias. Cada ranura lleva su propio Santuario y su sucesión de Ecos. Elige dónde jugar.</div>';
   for(let n=1;n<=3;n++){
     let sum=slotSummary(n);
-    if(sum){
+    if(sum && sum.succession){
+      // ranura con Santuario vivo pero sin Eco actual: la sucesión continúa
+      html+=`<div class="lrow" style="display:block;cursor:pointer" onclick="Game.enterSlot(${n})">
+        <div class="flex-between"><span class="nm c-amber">◈ RANURA ${n}</span><span class="meta c-gold">CONTINUAR SUCESIÓN ▸</span></div>
+        <div class="small c-dim" style="margin-top:2px">Santuario en pie${sum.lastName?(' · último Eco: '+sum.lastName):''} · ${sum.ecosCount} en el Cementerio · ${sum.shards} esquirlas</div>
+        <div class="small" style="margin-top:3px;color:var(--amber-glow)">Forja el siguiente Eco y continúa el descenso.</div>
+        <div class="small" style="margin-top:3px"><span class="cmd" style="font-size:10px;color:var(--red)" onclick="event.stopPropagation();Game.wipeSlot(${n})">borrar ranura y empezar de cero</span></div></div>`;
+    } else if(sum){
       let linDef=(DATA.lineages&&DATA.lineages[sum.lineage])?DATA.lineages[sum.lineage].name:sum.lineage;
       html+=`<div class="lrow" style="display:block;cursor:pointer" onclick="Game.enterSlot(${n})">
         <div class="flex-between"><span class="nm c-amber">◈ RANURA ${n}</span><span class="meta c-gold">CONTINUAR ▸</span></div>
@@ -18462,7 +19191,7 @@ Game.openSlotSelect=function(){
 };
 // selector de ranura para EXPORTAR (solo muestra las que tienen partida)
 Game.openExportPicker=function(){
-  let html='<div class="small c-dim mb">¿Qué ranura quieres exportar para llevártela a otro dispositivo?</div>';
+  let html='<div class="small c-dim mb">¿Qué ranura quieres exportar para llevártela a otro dispositivo? Se guarda TODO: el Eco actual (o la sucesión en curso), el Santuario con sus mejoras y almacén, el Cementerio y tu progreso.</div>';
   let any=false;
   for(let n=1;n<=3;n++){
     let sum=slotSummary(n);
@@ -18487,7 +19216,39 @@ Game.openImportPicker=function(){
   }
   openModal('▼ IMPORTAR — elegir ranura destino', html, [{label:'◂ Volver', action:()=>Game.openSlotSelect()}]);
 };
-Game.enterSlot=function(n){ setActiveSlot(n); SAN=null; closeModal(); Game.loadGame(); };
+Game.enterSlot=function(n){
+  setActiveSlot(n); SAN=null; closeModal();
+  let sum=slotSummary(n);
+  if(sum && sum.succession){
+    // sucesión en curso: no hay Eco vivo, pero el Santuario está en pie.
+    // Forjar el heredero, ofreciendo reusar la build del último caído.
+    Game.continueSuccession();
+  } else {
+    Game.loadGame();
+  }
+};
+// forjar el siguiente Eco de una ranura cuyo Santuario sigue vivo
+Game.continueSuccession=function(){
+  if(typeof loadSanctuary==='function') loadSanctuary();
+  let t=(typeof SAN!=='undefined'&&SAN)?SAN.lastEcoTemplate:null;
+  // ocultar el título mientras se decide
+  let ts=document.getElementById('titlescreen'); if(ts) ts.style.display='none';
+  let lastName=(typeof SAN!=='undefined'&&SAN&&SAN.lastEcoName)||'';
+  let html='<div class="small c-dim mb" style="line-height:1.7">El Santuario sigue en pie en el ojo de la tormenta. El último Eco'+(lastName?(' ('+lastName+')'):'')+' cayó, pero la sucesión no se rompe: otro recuerdo obstinado desciende para heredar el descenso.</div>';
+  html+='<div class="small mt">Conservas tus mejoras, tu almacén y los Ecos del Cementerio. Forja al heredero.</div>';
+  let btns=[
+    {label:'☩ Forjar un Eco nuevo', action:()=>{ closeModal(); Game.newGameFlow(); }}
+  ];
+  if(t){
+    btns.push({label:'↻ Heredero con las mismas estadísticas', action:()=>{
+      closeModal();
+      G._lastEcoTemplate=t; G._lastEcoName=t.name;
+      Game.reviveSameEco();
+    }});
+  }
+  btns.push({label:'⌂ Volver al título', action:()=>{ closeModal(); location.reload(); }});
+  openModal('◈ LA SUCESIÓN CONTINÚA', html, btns, {noClose:true});
+};
 Game.newInSlot=function(n){ setActiveSlot(n); SAN=null; closeModal(); Game.newGameFlow(); };
 Game.wipeSlot=function(n){
   let html='<div class="small mb">¿Borrar la RANURA '+n+' por completo? El Eco, su Santuario y todo su progreso se perderán para siempre. Esto no se puede deshacer.</div>';
@@ -19314,6 +20075,18 @@ Game.startNewGame=function(){
     stats:{...CC.stats}
   });
   if(_usaMagia){ player.magicAwakened=true; }
+  // guardar las estadísticas de CREACIÓN (las elegidas en el Umbral), separadas
+  // de las que el jugador tenga al morir. Un "heredero con las mismas estadísticas"
+  // debe empezar como empezaste tú, no con tus stats de nivel alto ni bonos.
+  player._creationStats = JSON.parse(JSON.stringify(CC.stats||{}));
+  player._creationBuild = {
+    cls:_clsEfectivo, subclass:CC.subclass, lineage:CC.lineage,
+    focus:_usaMagia?CC.focus:null, branch:_usaMagia?(CC.branch||'cuatrimental'):null,
+    oath:_usaMagia?CC.oath:null, background:CC.background, virtue:CC.virtue, flaw:CC.flaw,
+    magicForm:CC.magicForm||'none',
+    repertoire:(CC.repertoire||[]).slice(),
+    spellPick:(CC.spellPick||[]).slice()
+  };
   // trasfondo Superviviente: salvación extra
   let bg=DATA.backgrounds[CC.background];
   if(bg&&bg.extraDeathSave) player.extraDeathSave=true;
@@ -19467,6 +20240,14 @@ Game.startNewGame=function(){
 
   G.depth=0;
   buildLevel(0);   // despiertas en el SANTUARIO: la base entre incursiones
+  // el nuevo Eco ya vive: la sucesión ya no está "pendiente". Se limpia el flag
+  // y se GUARDA de inmediato, para que la ranura tenga siempre un save válido
+  // (aunque el jugador vuelva al título sin llegar a una hoguera).
+  try{
+    if(typeof loadSanctuary==='function') loadSanctuary();
+    if(typeof SAN!=='undefined' && SAN){ SAN.needsNewEco=false; SAN.runs=(SAN.runs||0)+1; if(typeof saveSanctuary==='function') saveSanctuary(); }
+  }catch(e){}
+  if(typeof Game._autoSaveNow==='function') Game._autoSaveNow();
   bindKeys();
   updateUI();
   if(typeof deferFit==='function') deferFit();
@@ -19841,8 +20622,39 @@ function showDeathScreen(){
       return fi; });
     SAN.ecos.unshift(fallen);
     while(SAN.ecos.length>5) SAN.ecos.pop();
+    // ═══ CADÁVER FÍSICO: dejar los restos EN EL PISO donde caíste, recuperables.
+    //     Lleva el equipo/objetos y las esquirlas que aún tenías. El siguiente Eco
+    //     puede bajar a ese piso, hallar el cadáver y recobrarlo todo. ═══
+    {
+      let corpseItems=[];
+      // consumibles que aún llevabas (armas/armaduras ya están en fallen.items)
+      for(let it of (p.inventory||[])){
+        if(it.kind==='consumable') corpseItems.push({kind:'consumable',id:it.id,qty:it.qty||1});
+      }
+      // el equipo caído (mismos que fallen.items)
+      for(let fi of fallen.items){ corpseItems.push({kind:fi.kind,id:fi.id,qty:1}); }
+      saveEcoCorpse(p, corpseItems);
+    }
+    // la SUCESIÓN continúa: aunque este Eco muriera, la ranura sigue viva. Se
+    // marca que el Santuario espera al siguiente Eco, para que al volver al
+    // título y reentrar a la ranura se pueda forjar al heredero (sin perder el
+    // Santuario, el almacén ni los Ecos previos).
+    SAN.needsNewEco=true;
+    SAN.lastEcoName=p.name;
+    { let _cb=p._creationBuild||{}, _cs=p._creationStats||p.stats||{};
+      SAN.lastEcoTemplate={ name:p.name,
+        lineage:_cb.lineage||p.lineage, cls:_cb.cls||p.cls, subclass:_cb.subclass||p.subclass,
+        background:_cb.background||p.background, virtue:_cb.virtue||p.virtue, flaw:_cb.flaw||p.flaw,
+        stats:JSON.parse(JSON.stringify(_cs)),
+        skills:(_cb.repertoire||[]).slice(), spells:(_cb.spellPick||[]).slice(),
+        focus:_cb.focus||p.focus, branch:_cb.branch||p.branch, oath:_cb.oath||p.oath,
+        magicForm:_cb.magicForm||(p.magicAwakened?'staff':'none'),
+        magicAwakened:(_cb.magicForm&&_cb.magicForm!=='none')||!!p.magicAwakened,
+        krosLevel:1 };
+    }
     saveSanctuary();
-    // 3) el guardado del Eco muerto se borra: no hay vuelta atrás
+    // 3) el guardado del Eco muerto se borra: ESE Eco no vuelve. Pero la ranura
+    //    permanece (el Santuario marca la sucesión en curso).
     try{ let ls=safeStorage(); if(ls){ ls.removeItem(slotKey('amsalor_save')); ls.removeItem(slotKey('amsalor_autosave')); } }catch(e){}
     // 4) el tiempo pasa también para los muertos
     if(typeof advanceWorldDay==='function') advanceWorldDay(1);
@@ -19877,13 +20689,22 @@ function showDeathScreen(){
     ${p._extractDeathSummary?`<hr class="divider"><div class="small" style="color:var(--cyan)">☨ ${p._extractDeathSummary.relics} reliquia(s) regresaron al Almacén del Santuario.<br>☩ ${p._extractDeathSummary.buried} pieza(s) de equipo yacen con tu Eco en el Cementerio — el Eco que te siga podrá rescatarlas.</div>`:''}
     <div class="small c-dim mt">El SANTUARIO permanece, intacto en el ojo de la tormenta: tus mejoras y tu almacén esperan al próximo Eco de la sucesión. La sucesión continúa: forja el siguiente Eco y sigue el descenso.</div>
   </div>`;
-  // guardar una copia del Eco caído para poder reusar sus MISMAS estadísticas
+  // guardar el molde del Eco caído para forjar un heredero "con las mismas
+  // estadísticas": se usan las de CREACIÓN (con las que empezó), NO las que tenía
+  // al morir. Así el heredero arranca igual que empezó el anterior: mismo punto
+  // de partida, no un personaje ya subido de nivel.
+  let _cb = p._creationBuild || {};
+  let _cstats = p._creationStats || p.stats || {};
   G._lastEcoTemplate = {
-    name:p.name, lineage:p.lineage, cls:p.cls, subclass:p.subclass, background:p.background,
-    virtue:p.virtue, flaw:p.flaw, stats:JSON.parse(JSON.stringify(p.stats||{})),
-    skills:(p.skills||[]).slice(), spells:(p.spells||[]).slice(),
-    focus:p.focus, branch:p.branch, oath:p.oath, magicAwakened:!!p.magicAwakened,
-    krosLevel:p.krosLevel
+    name:p.name,
+    lineage:_cb.lineage||p.lineage, cls:_cb.cls||p.cls, subclass:_cb.subclass||p.subclass,
+    background:_cb.background||p.background, virtue:_cb.virtue||p.virtue, flaw:_cb.flaw||p.flaw,
+    stats:JSON.parse(JSON.stringify(_cstats)),
+    skills:(_cb.repertoire||[]).slice(), spells:(_cb.spellPick||[]).slice(),
+    focus:_cb.focus||p.focus, branch:_cb.branch||p.branch, oath:_cb.oath||p.oath,
+    magicForm:_cb.magicForm||(p.magicAwakened?'staff':'none'),
+    magicAwakened: (_cb.magicForm&&_cb.magicForm!=='none')||!!p.magicAwakened,
+    krosLevel:1   // el heredero empieza desde el nivel 1, como todo Eco nuevo
   };
   G._lastEcoName=p.name;
   function _cleanupForNewEco(){
@@ -19941,14 +20762,111 @@ Game.spawnRevivedEco=function(name){
 
 // ---------- VICTORIA: el Corazón del Limbo cae ----------
 // determina QUÉ final corresponde según lo que el jugador haya hecho
+// ═══════════════════════════════════════════════════════════════════════════
+//  LOS SENDEROS DEL DESTINO — la guía hacia los cuatro finales.
+//  Cada sendero es una lista de PASOS ordenados. Cada paso tiene:
+//    - text: qué hacer (instrucción clara)
+//    - hint: una pista más velada, para quien quiera menos ayuda
+//    - done(): función que evalúa si el paso está cumplido (lee SAN/flags/player)
+//  El Tablón de los Destinos, el NPC guía y los fragmentos leen esta estructura.
+//  Ordenados de más corto/fácil a más largo/difícil.
+// ═══════════════════════════════════════════════════════════════════════════
+function _san(){ try{ if(typeof loadSanctuary==='function') return loadSanctuary()||{}; }catch(e){} return (typeof SAN!=='undefined'&&SAN)||{}; }
+function _flg(){ return G.endingFlags||{}; }
+function _bossSlain(id){ let s=_san(); return !!(s.bossesSlain&&s.bossesSlain[id]); }
+function _truthsFound(){ let s=_san(); return (s.truthsFound&&s.truthsFound.length)||0; }
+function _keyShards(){ let s=_san(); return (s.keyShards||0); }
+
+DATA.destinyPaths = {
+  canon: {
+    id:'canon', order:1, name:'ALIMENTO', glyph:'❦', color:'--red',
+    tagline:'El fin más directo. Baja, encuentra el Corazón, destrúyelo.',
+    difficulty:'Corto',
+    steps:[
+      { text:'Derrota al Guardián de las Fauces (fondo de las Cuevas, prof. 6).',
+        hint:'Algo hecho de los muertos custodia el primer paso hondo.',
+        done:()=>_bossSlain('guardian_fauces') },
+      { text:'Derrota al Digestor (fondo del Bosque, prof. 12).',
+        hint:'Donde terminan los que se rinden, hay un estómago que piensa.',
+        done:()=>_bossSlain('digestor') },
+      { text:'Desciende hasta el Corazón de la Anomalía (fondo del Cementerio, prof. 16) y destrúyelo.',
+        hint:'Lo sentirás latir bajo el suelo. Mátalo.',
+        done:()=>!!_flg().heartDestroyed }
+    ]
+  },
+  bueno: {
+    id:'bueno', order:2, name:'EL QUE ESCAPÓ', glyph:'✦', color:'--amber-glow',
+    tagline:'Romper el ciclo DE VERDAD: hace falta la Llave de la Salida y una mente entera.',
+    difficulty:'Medio',
+    steps:[
+      { text:'Reúne los 3 FRAGMENTOS DE LA LLAVE, dispersos en los pisos profundos (prof. 12+).',
+        hint:'La salida no se encuentra: se forja con tres piezas que la anomalía dispersó.',
+        done:()=>_keyShards()>=3 },
+      { text:'Forja la Llave de la Salida en el Yunque del Santuario (con los 3 fragmentos).',
+        hint:'Tres piezas, un yunque, una cerradura al mundo.',
+        done:()=>!!_flg().hasExitKey },
+      { text:'Llega al Corazón con la cordura por debajo del 60% de locura.',
+        hint:'No basta con la llave: hay que llegar cuerdo para usarla.',
+        done:()=>!!_flg().hasExitKey && (G.player&&(G.player.madness||0)<60) },
+      { text:'Destruye el Corazón llevando la Llave. La cerradura del tiempo cede.',
+        hint:'Con la llave en la mano, el golpe final abre en vez de cerrar.',
+        done:()=>!!_flg().heartDestroyed && !!_flg().hasExitKey && (G.player&&(G.player.madness||0)<60) }
+    ]
+  },
+  desesperanza: {
+    id:'desesperanza', order:3, name:'LA NUEVA MENTE', glyph:'☉', color:'--violet-bright',
+    tagline:'La senda oscura: no venzas al Corazón — ríndete a él, y ocupa su trono.',
+    difficulty:'Largo',
+    steps:[
+      { text:'Deja que tu locura crezca hasta el 80%. No la cures en el Santuario.',
+        hint:'El Limbo solo escucha a quien ya casi le pertenece. Deja que el ruido te llene.',
+        done:()=>(G.player&&(G.player.madness||0)>=80) },
+      { text:'Encuentra el ALTAR DEL CORAZÓN (en el piso del jefe final, prof. 16).',
+        hint:'Junto al Corazón hay un lugar para arrodillarse en vez de luchar.',
+        done:()=>!!_flg().foundHeartAltar },
+      { text:'COMULGA con el Corazón en su altar en vez de destruirlo. Ofrécele tu Eco.',
+        hint:'No alces el arma. Alza las manos. Deja que te haga suyo.',
+        done:()=>!!_flg().communedWithHeart }
+    ]
+  },
+  testigo: {
+    id:'testigo', order:4, name:'EL TESTIGO', glyph:'◉', color:'--violet',
+    tagline:'El fin secreto: comprender el mecanismo. Solo para quien gire la rueda muchas veces y desentierre la verdad.',
+    difficulty:'El más largo · secreto',
+    steps:[
+      { text:'Reúne las 3 VERDADES DE AMSALOR, fragmentos de lore ocultos en las zonas profundas y tras los jefes.',
+        hint:'La anomalía miente. Tres esquirlas de verdad, bien escondidas, revelan qué es en realidad.',
+        done:()=>_truthsFound()>=3 },
+      { text:'Completa el CICLO al menos 3 veces (acuña 3 Monedas de Kaelis extrayendo del endgame ∞).',
+        hint:'No verás el mecanismo desde dentro de una sola vuelta. Hacen falta tres.',
+        done:()=>(_san().kaelis||0)>=3 },
+      { text:'Con las 3 Verdades y 3 Monedas, destruye el Corazón. Verás lo que ningún Eco vio.',
+        hint:'Sabiendo lo que sabes, el golpe final ya no rompe una cueva: detiene la rueda entera.',
+        done:()=>!!_flg().heartDestroyed && _truthsFound()>=3 && (_san().kaelis||0)>=3 }
+    ]
+  }
+};
+// progreso de un sendero: {done, total, current, allDone}
+function destinyProgress(pathId){
+  let pth=DATA.destinyPaths[pathId]; if(!pth) return null;
+  let done=0, current=null;
+  for(let i=0;i<pth.steps.length;i++){
+    let ok=false; try{ ok=!!pth.steps[i].done(); }catch(e){}
+    if(ok) done++;
+    else if(current===null) current=i;
+  }
+  return { done:done, total:pth.steps.length, current:current, allDone:done===pth.steps.length };
+}
+window.destinyProgress=destinyProgress;
+
 function determineEnding(){
   const p=G.player, f=G.endingFlags||{};
-  // FINAL SECRETO — EL TESTIGO: destruiste el Corazón habiendo girado el Ciclo
-  // al menos 3 veces (3+ Monedas de Kaelis). Viste el mecanismo. Sabes qué es esto.
-  if(f.heartDestroyed && typeof loadSanctuary==='function' && (loadSanctuary().kaelis||0)>=3) return 'testigo';
+  // FINAL SECRETO — EL TESTIGO: destruiste el Corazón sabiendo qué es (3 Verdades)
+  // y habiendo girado el Ciclo 3+ veces (3 Monedas de Kaelis). El más difícil.
+  if(f.heartDestroyed && _truthsFound()>=3 && (_san().kaelis||0)>=3) return 'testigo';
   // FINAL DESESPERANZA: te fusionaste con el Corazón (pacto oscuro + locura máxima + no lo destruiste)
   if(f.communedWithHeart && (p.madness||0)>=80) return 'desesperanza';
-  // FINAL BUENO: destruiste el Corazón Y conservaste la cordura Y encontraste la Llave de la Salida
+  // FINAL BUENO: destruiste el Corazón Y conservaste la cordura Y forjaste la Llave de la Salida
   if(f.heartDestroyed && (p.madness||0)<60 && f.hasExitKey) return 'bueno';
   // FINAL CANON: destruiste el Corazón pero la cueva no te deja ir (lo más común)
   if(f.heartDestroyed) return 'canon';
@@ -20020,6 +20938,24 @@ function showVictoryScreen(forced){
     </div>`;
   }
 
+  // ═══ EL PESO DE LA SUCESIÓN: recordar cuántos Ecos cayeron para llegar aquí ═══
+  let _succLine='';
+  try{
+    if(typeof loadSanctuary==='function'){ loadSanctuary();
+      let _runs=SAN.runs||0, _ecos=(SAN.ecos&&SAN.ecos.length)||0;
+      if(_runs>1||_ecos>0){
+        _succLine=`<hr class="divider"><div class="small" style="max-width:460px;margin:0 auto;color:var(--amber);line-height:1.7;text-align:center">
+          No llegaste solo. <b>${_runs}</b> Eco(s) de tu sucesión descendieron a esta herida, y cada uno dejó un paso más del camino.
+          ${ending==='bueno'||ending==='testigo'?'Su recorrido, sumado al tuyo, fue lo que por fin bastó.':'Su recorrido continúa en el que venga después.'}</div>`;
+      }
+    }
+  }catch(e){}
+  html+=_succLine;
+  // si el golpe final fue LA COMUNIÓN, reconocerlo: no lo mató un Eco, lo mató la sucesión entera
+  if(G.endingFlags && G.endingFlags.communedForKill){
+    html+=`<div class="small" style="max-width:460px;margin:8px auto 0;color:var(--gold);line-height:1.7;text-align:center;font-style:italic">
+      ✷ El golpe que detuvo el Corazón no fue tuyo solo. Fue la COMUNIÓN: todos los Ecos de tu sucesión, alzándose a la vez desde las vueltas del tiempo, golpeando como uno. La rueda no cayó ante un hombre. Cayó ante todos los que ella creyó haber molido.</div>`;
+  }
   html+=`<hr class="divider">
     <div class="small" style="max-width:400px;margin:0 auto;text-align:left">
       <div class="stat-row"><span class="lbl">Destino</span><span class="val">${p.name} · ${(DATA.lineages[p.lineage]||{}).name||''}</span></div>
@@ -20073,14 +21009,26 @@ function setActiveSlot(n){
 }
 // clave con sufijo de slot: 'amsalor_save' → 'amsalor_save_2', etc.
 function slotKey(base, slot){ slot=slot||activeSlot(); return base+'_'+slot; }
-// resumen de un slot para el menú de selección (o null si está vacío)
+// resumen de un slot para el menú de selección (o null si está VERDADERAMENTE vacío)
 function slotSummary(n){
   try{ let s=safeStorage(); if(!s) return null;
     let raw=s.getItem(slotKey('amsalor_save',n))||s.getItem(slotKey('amsalor_autosave',n));
-    if(!raw) return null;
-    let d=JSON.parse(raw); let pl=d.player||{};
-    return { name:pl.name||'Eco', level:pl.level||1, depth:d.depth||0,
-      lineage:pl.lineage||'', krosLevel:pl.krosLevel||1, when:d._savedAt||0 };
+    if(raw){
+      let d=JSON.parse(raw); let pl=d.player||{};
+      return { name:pl.name||'Eco', level:pl.level||1, depth:d.depth||0,
+        lineage:pl.lineage||'', krosLevel:pl.krosLevel||1, when:d._savedAt||0, succession:false };
+    }
+    // sin partida activa, pero ¿hay un SANTUARIO? entonces la SUCESIÓN sigue viva:
+    // el Eco murió pero la ranura conserva su Santuario y sus Ecos previos.
+    let sanRaw=s.getItem(slotKey('amsalor_sanctuary',n));
+    if(sanRaw){
+      let san=JSON.parse(sanRaw);
+      // solo cuenta como sucesión en curso si ese Santuario tiene historia
+      if(san && (san.needsNewEco || (san.ecos&&san.ecos.length) || (san.upgrades&&Object.keys(san.upgrades).length) || san.runs)){
+        return { succession:true, lastName:san.lastEcoName||(san.ecos&&san.ecos[0]&&san.ecos[0].name)||'', ecosCount:(san.ecos&&san.ecos.length)||0, shards:san.shards||0, runs:san.runs||0 };
+      }
+    }
+    return null;
   }catch(e){ return null; }
 }
 window.activeSlot=activeSlot; window.setActiveSlot=setActiveSlot; window.slotKey=slotKey; window.slotSummary=slotSummary;
@@ -20113,7 +21061,10 @@ function buildExportPackage(slot){
   slot = slot || activeSlot();
   let ls = safeStorage();
   if(!ls) return null;
-  let bases=['amsalor_save','amsalor_autosave','amsalor_sanctuary','amsalor_graveyard'];
+  // TODAS las claves por ranura: partida, autosave, Santuario (que ya lleva la
+  // sucesión: needsNewEco/lastEcoTemplate), cementerio, el cadáver físico del Eco
+  // caído y la bitácora del jugador. Así el export contiene la línea completa.
+  let bases=['amsalor_save','amsalor_autosave','amsalor_sanctuary','amsalor_graveyard','amsalor_ecocorpse','amsalor_notes'];
   let data={};
   for(let b of bases){
     let v=null; try{ v=ls.getItem(b+'_'+slot); }catch(e){}
@@ -20161,7 +21112,7 @@ function applyImportPackage(pkg, destSlot){
   destSlot = destSlot || pkg.slot || activeSlot();
   try{
     // limpiar la ranura destino antes de escribir
-    let bases=['amsalor_save','amsalor_autosave','amsalor_sanctuary','amsalor_graveyard'];
+    let bases=['amsalor_save','amsalor_autosave','amsalor_sanctuary','amsalor_graveyard','amsalor_ecocorpse','amsalor_notes'];
     for(let b of bases){ try{ ls.removeItem(b+'_'+destSlot); }catch(e){} }
     // escribir los datos de la ranura
     for(let k in pkg.data){
@@ -20449,7 +21400,8 @@ function serializePlayer(p){
     },
     inventory:p.inventory, spells:p.spells, skills:p.skills, statuses:p.statuses,
     gold:p.gold, armonixDose:p.armonixDose, deathSaveUsed:p.deathSaveUsed,
-    achBonus:p.achBonus||{}
+    achBonus:p.achBonus||{},
+    _creationStats:p._creationStats||null, _creationBuild:p._creationBuild||null
   };
 }
 
@@ -20484,6 +21436,8 @@ Game.loadGame=function(){
       spells:s.player.spells||[],skills:s.player.skills||[],
       statuses:s.player.statuses||{},gold:s.player.gold,armonixDose:s.player.armonixDose||0,
       deathSaveUsed:s.player.deathSaveUsed||false,
+      _creationStats:s.player._creationStats||null,
+      _creationBuild:s.player._creationBuild||null,
       // ✧ bonos permanentes de logros: si el guardado es anterior al sistema,
       // se recalculan desde los logros que ya tengas (nunca se pierden).
       achBonus:s.player.achBonus||achBonusFromMeta()
@@ -20988,6 +21942,8 @@ UI.openMasterMenu=function(){
     return '<div class="mstr-wrap">'+nav+body+'</div>';
   }
   openModal('☰ MENÚ', build(), [
+    {label:'❦ Bitácora', action:()=>{ if(typeof Game.openNotes==='function') Game.openNotes(); }},
+    {label:'✧ Destinos', action:()=>{ if(typeof Game.openDestinyBoard==='function') Game.openDestinyBoard(); }},
     {label:'✧ Logros', action:()=>{ if(typeof Game.openAchievements==='function') Game.openAchievements(); }},
     {label:'⌂ Pantalla principal', action:()=>Game.confirmReturnToTitle()},
     {label:'Cerrar (Esc)',action:'close'}
