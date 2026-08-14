@@ -289,6 +289,20 @@ body.noscan::after{display:none}
 }
 #status-panel .panel-body{overflow-y:auto;flex:1;min-height:0}
 #col-right{flex:1;display:flex;flex-direction:column;gap:8px;min-height:0}
+/* EN COMBATE (PC): la columna derecha muestra la CRÓNICA DE COMBATE (como el
+   boceto), no el menú de personaje. La crónica se pinta en #log-panel; el panel de
+   personaje (status) y las tabs se ocultan para que no compitan. Así NO hay crónica
+   duplicada: en PC vive solo aquí, no dentro del área de combate. */
+#app.is-combat #status-panel{display:none}
+#app.is-combat #info-panel{display:none}
+#app.is-combat #log-panel{display:flex;flex:1 1 auto;min-height:0}
+/* el área de combate (izquierda) usa el ancho disponible; la crónica queda a la
+   derecha, más estrecha (≈320px como el boceto). */
+#app.is-combat #col-left{width:auto;flex:1 1 auto}
+#app.is-combat #col-right{flex:0 0 320px;max-width:320px}
+/* en combate el viewport muestra PANELES (texto), no el mapa: usa un tamaño de
+   fuente de lectura normal, no el gigante del mapa (21px), que descuadraba todo. */
+#app.is-combat #viewport.combat-mode{font-size:14px;line-height:1.4}
 
 /* The map viewport */
 #viewport{
@@ -326,11 +340,23 @@ body.noscan::after{display:none}
    añade tamaño propio: hereda la métrica monoespaciada del viewport. */
 #viewport .vp-cell{display:inline;margin:0;padding:0}
 #viewport{line-height:1}
-/* ═══ COMBATE EN 3 ZONAS: eje fijo arriba · lista con scroll · TÚ fijo abajo ═══
-   Antes todo era una sola columna y tu bloque quedaba al final, fuera de la
-   pantalla en cuanto había varios enemigos y aliados. */
-#viewport.combat-mode{display:flex;flex-direction:column;overflow:hidden}
-.cb-axis{flex:0 0 auto;padding-bottom:4px}
+/* ═══ COMBATE POR PANELES ETIQUETADOS (boceto del usuario) ═══
+   Cuatro secciones apiladas, cada una con su encabezado en mayúsculas tenues:
+   EJE TÁCTICO · COMBATIENTES · [tu bloque] · CRÓNICA DE COMBATE.
+   El eje, tu bloque y la crónica son de altura fija; los combatientes ocupan el
+   resto con scroll. Paleta estricta: negro, gris, blanco. */
+#viewport.combat-mode{display:flex;flex-direction:column;overflow:hidden;gap:5px}
+/* encabezado de sección: la etiqueta tenue que se ve en el boceto */
+.cb-sechead{
+  font-size:9.5px;letter-spacing:1.5px;color:var(--ink-dim);
+  padding:2px 6px 3px;border-bottom:1px solid var(--line);margin-bottom:3px;
+  text-transform:uppercase;
+}
+.cb-sec{border:1px solid var(--line);background:#0a0a0a;padding:4px 6px;display:flex;flex-direction:column;min-height:0}
+.cb-axis-sec{flex:0 0 auto}
+.cb-self-sec{flex:0 0 auto}
+.cb-list-sec{flex:1 1 auto;min-height:48px}
+.cb-axis{flex:0 0 auto;padding-bottom:2px}
 .cb-atk{font-size:11px;letter-spacing:0.3px;font-weight:bold}
 .cb-list{
   flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;
@@ -343,13 +369,45 @@ body.noscan::after{display:none}
 .cb-list::-webkit-scrollbar-track{background:transparent}
 .cb-self{
   flex:0 0 auto;
-  border-top:1px solid var(--line-bright);
-  margin-top:4px;padding-top:5px;
   background:var(--bg);
 }
+/* LEYENDA DE ESTADOS ACTIVOS: icono · nombre · qué hace, una fila por efecto */
+.cb-legend-sec{flex:0 0 auto;max-height:120px}
+.cb-legend{overflow-y:auto;min-height:0;scrollbar-width:thin;scrollbar-color:#3a3a3a transparent}
+.cb-legend::-webkit-scrollbar{width:6px}
+.cb-legend::-webkit-scrollbar-thumb{background:#3a3a3a}
+.cb-leg-row{display:grid;grid-template-columns:22px auto 1fr;gap:6px;align-items:baseline;padding:2px 0;font-size:11px}
+.cb-leg-ic{display:inline-flex;align-items:center;justify-content:center;width:20px;height:16px;border:1px solid;border-radius:3px;font-size:11px;flex:0 0 auto}
+.cb-leg-nm{font-weight:bold;white-space:nowrap;font-size:11px}
+.cb-leg-ds{color:var(--ink-dim);font-size:10.5px;line-height:1.3}
+/* ── CRÓNICA DE COMBATE: panel de altura fija con SU PROPIO scroll ── */
+.cb-chronicle{
+  flex:0 0 auto;
+  background:#0a0a0a;
+  max-height:104px;min-height:56px;
+}
+.cb-chronicle .cbc-lines{
+  flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;
+  padding:2px 4px;
+  scrollbar-width:thin;scrollbar-color:#3a3a3a transparent;
+}
+.cb-chronicle .cbc-lines::-webkit-scrollbar{width:6px}
+.cb-chronicle .cbc-lines::-webkit-scrollbar-thumb{background:#3a3a3a}
+.cb-chronicle .cbc-lines::-webkit-scrollbar-track{background:transparent}
+.cb-chronicle .cbc-line{font-size:11.5px;line-height:1.45;margin:0;padding:1px 0;white-space:normal}
+.cb-chronicle .cbc-empty{padding:6px 0;text-align:center;font-style:italic}
 /* ── Bloque del jugador en combate: estructura flex, NADA se superpone ── */
-.cb-self-inner{display:flex;flex-direction:column;gap:3px}
-.cb-self-name{font-size:13px;line-height:1.2}
+.cb-self-inner{display:flex;flex-direction:column;gap:4px}
+.cb-self-name{font-size:13px;line-height:1.2;display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px}
+.cb-self-stance{margin-left:auto}
+/* rejilla de estadísticas: 2 columnas (HP/Kr arriba, Al/Ca abajo), como el boceto */
+.cb-self-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 14px}
+.cb-mb{display:flex;align-items:center;gap:5px;font-size:11px;min-width:0}
+.cb-mb-lbl{color:var(--ink-dim);flex:0 0 auto;min-width:16px}
+.cb-mb-bar{flex:1 1 auto;height:9px;min-width:30px;background:#0b0b09;border:1px solid var(--line-bright);position:relative;overflow:hidden}
+.cb-mb-bar i{position:absolute;left:0;top:0;bottom:0;transition:width .25s}
+.cb-mb-val{flex:0 0 auto;color:var(--ink-bright);white-space:nowrap;font-size:10.5px}
+.cb-self-atb{font-size:11px;letter-spacing:0.5px}
 .cb-self-vital{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .cb-self-vital .cb-atb{white-space:nowrap;flex:0 0 auto}
 /* fila de recursos: chips que se ENVUELVEN solos cuando no caben */
@@ -453,7 +511,9 @@ body.noscan::after{display:none}
 }
 .cb-glyph{will-change:transform,color}
 /* ===== EJE TÁCTICO DE DISTANCIA (combate) ===== */
-.dist-wrap{display:block;margin:2px 10px 10px}
+/* eje táctico: barra de posiciones (los botones de mover ya no van aquí, van en
+   una fila propia sobre las acciones, ver .move-cmd) */
+.dist-wrap{margin:2px 8px 6px}
 .dist-track{position:relative;height:52px;border:1px solid var(--line-bright);background:#0c0c0c;overflow:hidden}
 .dist-track .dr{position:absolute;top:0;bottom:0;background:rgba(255,190,80,.14);border-left:1px solid var(--amber);border-right:1px solid var(--amber);pointer-events:none;z-index:1}
 /* zona de amenaza enemiga: franja tenue del color según su tipo de ataque.
@@ -467,7 +527,7 @@ body.noscan::after{display:none}
 .dist-track .di.pl{color:var(--amber-glow);z-index:3}
 .dist-track .di.en{color:var(--red-bright,#d05050);z-index:2}
 .dist-track .di.al{color:var(--green);z-index:2}
-.dist-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-dim);margin-top:2px;letter-spacing:1px}
+.dist-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-dim);margin-top:3px;letter-spacing:1px}
 #log-panel{flex:1 1 0;min-height:120px;display:flex;flex-direction:column}
 #log-panel .panel-body{flex:1;min-height:0;overflow-y:auto}
 /* el panel de pestañas (inventario etc.) permanece OCULTO en la columna:
@@ -492,6 +552,12 @@ body.noscan::after{display:none}
 #status .stat-row{display:flex;justify-content:space-between;font-size:13px;padding:1px 0}
 #status .stat-row .lbl{color:var(--ink-dim)}
 #status .stat-row .val{color:var(--ink-bright)}
+/* filas de la GUÍA (fuera de #status): label a la izquierda, valor a la derecha,
+   con separación real para que NUNCA se peguen las palabras (era el problema en
+   móvil, donde el texto quedaba junto). */
+#modal-body .stat-row{display:flex;justify-content:space-between;gap:14px;padding:2px 0;align-items:baseline}
+#modal-body .stat-row .lbl{color:var(--ink-dim);flex:0 0 auto}
+#modal-body .stat-row .val{color:var(--ink-bright);text-align:right;flex:1 1 auto;min-width:0}
 
 /* bars */
 .bar{
@@ -556,6 +622,9 @@ body.noscan::after{display:none}
 .cmd.danger:hover{color:var(--red-bright);border-color:var(--red)}
 .cmd.danger:hover .key{border-color:var(--red);color:var(--red-bright);background:rgba(200,50,50,0.15)}
 .cmd.disabled{opacity:0.35;cursor:default;pointer-events:none}
+/* botones de MOVER (posición): tinte frío para distinguirlos de las acciones */
+.cmd.move-cmd{border-color:#3a4a5a;background:#101418}
+.cmd.move-cmd:hover:not(.disabled){border-color:var(--cyan);color:var(--cyan);background:#141c22}
 
 /* Inventory / list rows */
 .lrow{
@@ -743,6 +812,19 @@ body.noscan::after{display:none}
 #titlescreen .stars{position:absolute;inset:0;pointer-events:none;z-index:-1}
 
 @keyframes fadein{to{opacity:1}}
+/* RED DE SEGURIDAD: los elementos del título (logo, subtítulo, tagline y el MENÚ
+   principal) arrancan con opacity:0 y se revelan con la animación 'fadein'. Si el
+   navegador tiene "reducir movimiento" activado (común en móviles, y Brave puede
+   forzarlo), esa animación puede no aplicar su estado final y el menú se quedaría
+   INVISIBLE para siempre — sin título ni botones. Con reduce-motion, los hacemos
+   visibles de inmediato, sin depender de la animación. */
+@media (prefers-reduced-motion: reduce){
+  #titlescreen .menu,
+  #titlescreen .tagline,
+  #titlescreen .subtitle,
+  #titlescreen .ascii-logo,
+  #titlescreen #logo{ opacity:1 !important; animation:none !important; }
+}
 @keyframes pulse{0%,100%{opacity:0.5}50%{opacity:1}}
 @keyframes aggroBlink{0%,100%{opacity:1}50%{opacity:0.55}}
 /* animación de desbloqueo del código secreto (Jegothzhex) */
@@ -844,8 +926,13 @@ body.noscan::after{display:none}
 /* móvil: la descripción larga del atributo se oculta para dejar sitio a los
    números y botones +/− (antes se salían o se solapaban con el borde). */
 @media(max-width:560px){
-  .statline{font-size:12px;gap:6px}
-  .statline .sl-name .sl-desc{display:none}
+  /* en móvil el atributo pasa a DOS líneas: nombre + controles arriba, y la
+     descripción debajo en pequeño. Así se ve QUÉ hace cada estadística sin
+     ventanas emergentes ni botones extra (mejor para un juego). */
+  .statline{flex-wrap:wrap;font-size:12px;gap:4px 6px}
+  .statline .sl-name{flex:1 1 60%;white-space:normal;overflow:visible}
+  .statline .sl-name .sl-desc{display:block;font-size:10.5px;line-height:1.35;margin-top:1px;opacity:0.85}
+  .statline .sl-ctl{flex:0 0 auto;order:2}
   .statbtn{width:26px;padding:3px 0}
 }
 
@@ -859,43 +946,60 @@ body.noscan::after{display:none}
 .gap{gap:8px}.wrap{flex-wrap:wrap}
 .grow{flex:1}
 
-/* ============ CONTROLES TÁCTILES (móvil) ============ */
+/* ============ CONTROLES TÁCTILES (móvil) — gamepad estilo consola ============ */
 #touchcontrols{display:none}
 #mobilebar{display:none}
 
-.tc-wrap{
-  display:flex;align-items:center;justify-content:space-between;
-  gap:10px;padding:8px 10px 12px;border-top:1px solid var(--line-bright);
+/* contenedor del gamepad: fila principal (cruceta + caras) y fila de sistema */
+.pad-explore{
+  display:flex;flex-direction:column;gap:8px;
+  padding:8px 12px 10px;border-top:1px solid var(--line-bright);
   background:var(--bg2);flex-shrink:0;
 }
-/* D-pad */
-.dpad{display:grid;grid-template-columns:repeat(3,46px);grid-template-rows:repeat(3,46px);gap:4px;flex-shrink:0}
+.pad-main{
+  display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;align-items:center;
+}
+/* D-pad: cruceta con centro inerte (como el boceto) */
+.dpad{width:144px;height:144px;position:relative;justify-self:start}
 .dbtn{
-  border:1px solid var(--line-bright);background:#111;color:var(--ink-bright);
-  font-size:20px;display:flex;align-items:center;justify-content:center;
-  user-select:none;-webkit-user-select:none;cursor:pointer;border-radius:4px;
+  position:absolute;width:46px;height:46px;background:#161616;border:1px solid var(--line-bright);
+  color:var(--ink-bright);display:flex;align-items:center;justify-content:center;font-size:18px;
+  user-select:none;-webkit-user-select:none;cursor:pointer;
   touch-action:manipulation;-webkit-tap-highlight-color:transparent;
 }
-.dbtn:active{background:#fff;color:#000}
-.dbtn.pressed{background:#fff;color:#000}   /* feedback inmediato al tocar (touchstart) */
-.dbtn.up{grid-column:2;grid-row:1}
-.dbtn.left{grid-column:1;grid-row:2}
-.dbtn.center{grid-column:2;grid-row:2;border-style:dashed;font-size:13px;color:var(--ink-dim)}
-.dbtn.right{grid-column:3;grid-row:2}
-.dbtn.down{grid-column:2;grid-row:3}
-.dbtn.blank{border:none;background:none}
-/* botones de acción contextual a la derecha del dpad */
-.tc-actions{display:flex;flex-wrap:wrap;gap:6px;flex:1;justify-content:flex-end;align-content:center}
-.tcbtn{
-  border:1px solid var(--line-bright);background:#121212;color:var(--ink);
-  padding:9px 12px;font-size:13px;border-radius:4px;user-select:none;cursor:pointer;
-  min-width:62px;text-align:center;touch-action:manipulation;
+.dbtn:active,.dbtn.pressed{background:#fff;color:#000}
+.dbtn.up{left:49px;top:0;border-radius:3px 3px 0 0}
+.dbtn.down{left:49px;bottom:0;border-radius:0 0 3px 3px}
+.dbtn.left{left:0;top:49px;border-radius:3px 0 0 3px}
+.dbtn.right{right:0;top:49px;border-radius:0 3px 3px 0}
+.dbtn.core{left:49px;top:49px;background:#101010;border-color:var(--line);pointer-events:none;color:#333;font-size:9px}
+/* caras A/B: botones redondos con etiqueta debajo, a la derecha */
+.faces{
+  justify-self:end;display:grid;grid-template-columns:56px 56px;grid-template-rows:56px 56px;gap:9px;width:121px;
 }
-.tcbtn:active{background:#fff;color:#000}
-.tcbtn.pressed,.tcbtn:active{background:#2a2a2a}   /* feedback inmediato al tocar */
-.tcbtn.pressed .tc-face,.tcbtn:active .tc-face{background:#fff;color:#000}
-.tcbtn .ic{display:block;font-size:16px;margin-bottom:1px}
-.tcbtn.wide{flex-basis:100%}
+.face{
+  border:1px solid var(--line-bright);background:#161616;color:var(--ink);border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:18px;font-weight:bold;user-select:none;cursor:pointer;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+.face:active,.face.pressed{background:#fff;color:#000}
+.face:active .lbl,.face.pressed .lbl{color:#000}
+.face .lbl{font-size:8px;font-weight:normal;color:var(--ink-dim);margin-top:1px}
+.face.a{grid-column:2;grid-row:1}
+.face.b{grid-column:1;grid-row:2}
+.face.a.hot{border-color:var(--amber-glow);box-shadow:0 0 0 1px rgba(230,192,123,0.3)}
+.face.a.hot .lbl{color:var(--amber-glow)}
+/* fila de sistema: Select / Start (píldoras) */
+.sysrow{display:flex;justify-content:center;gap:14px}
+.sysbtn{
+  border:1px solid var(--line-bright);background:#121212;color:var(--ink-dim);
+  padding:8px 18px;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;
+  border-radius:13px;min-width:104px;text-align:center;cursor:pointer;
+  user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+.sysbtn:active,.sysbtn.pressed{background:#2a2a2a;color:var(--ink-bright)}
+.sysbtn .s{display:block;font-size:8px;letter-spacing:0.3px;margin-top:1px;text-transform:none;opacity:0.75}
 
 /* barra superior de menús en móvil */
 .mb-row{display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid var(--line-bright);
@@ -1032,18 +1136,26 @@ body.noscan::after{display:none}
   #titlebar .t-btn[onclick*="openSettings"]{display:none}
   #titlebar .t-btn[onclick*="openJournal"]{display:none}
   /* HUD VITAL (inspirado en Pocket Survival): barras con números, siempre a la vista */
-  #mvitals{display:flex !important;flex-wrap:wrap;gap:3px;padding:4px 6px;background:var(--bg2);border-top:1px solid var(--line-bright);flex-shrink:0}
-  .mvb{flex:1 1 46%;height:17px;position:relative;background:#0b0b09;border:1px solid var(--line-bright);overflow:hidden}
+  /* franja de vitales: grilla de 4 columnas, como el boceto. Los medidores ocupan
+     1 columna; las celdas anchas (esquirlas, postura) ocupan 2. */
+  #mvitals{display:grid !important;grid-template-columns:repeat(4,1fr);gap:3px;padding:5px 6px;background:var(--bg2);border-top:1px solid var(--line-bright);flex-shrink:0}
+  .mvb{height:18px;position:relative;background:#0b0b09;border:1px solid var(--line-bright);overflow:hidden}
   .mvb i{position:absolute;left:0;top:0;bottom:0;opacity:.5;transition:width .25s}
-  .mvb b{position:relative;z-index:1;font-size:10px;font-weight:700;letter-spacing:0;color:var(--ink-bright);display:flex;align-items:center;justify-content:space-between;padding:0 5px;height:100%;font-family:inherit}
-  /* esquirlas: casilla estrecha, sin barra de relleno */
-  .mvb-coin{flex:0 0 auto;min-width:64px}
+  .mvb b{position:relative;z-index:1;font-size:8px;font-weight:700;letter-spacing:0.3px;color:var(--ink-bright);display:flex;align-items:center;justify-content:space-between;padding:0 3px;height:100%;font-family:inherit;text-shadow:0 0 2px #000}
+  /* celdas anchas (esquirlas, postura): ocupan 2 columnas, texto centrado, sin barra */
+  .mvb.coin{grid-column:span 2;display:flex;align-items:center;justify-content:center;font-size:9px;letter-spacing:0.3px;padding:0 4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .mvb.coin i{display:none}
+  .mvb-coin{color:var(--gold)}
+  .mvb-stance{color:var(--ink-dim)}
 
   /* MAIN ocupa todo el alto entre titlebar y controles, en columna */
   #main{flex-direction:column;gap:0;margin-top:0;flex:1 1 auto;min-height:0;overflow:hidden}
 
   #col-left{width:100%;flex:1 1 auto;min-height:0;gap:0;display:flex;flex-direction:column}
   #col-right{width:100%;flex:0 0 auto;gap:0;display:flex;flex-direction:column;min-height:0}
+  /* ORDEN del boceto: la franja de vitales va ARRIBA del mapa (no debajo). */
+  #col-left > #mvitals{order:-1}
+  #col-left > #viewport-panel{order:0}
 
   /* ===== EL MAPA DOMINA: ocupa todo el espacio flexible ===== */
   #viewport-panel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
@@ -1080,27 +1192,9 @@ body.noscan::after{display:none}
      hay algo con qué interactuar. Todo fijo abajo, como una consola. */
   #touchControlsExplore{display:flex;flex-shrink:0;align-items:center;justify-content:space-between;
     background:linear-gradient(180deg, transparent, rgba(0,0,0,0.25));}
-  .tc-wrap{padding:8px 12px 12px 16px;gap:10px}
-  /* cruceta grande y cómoda para el pulgar izquierdo */
-  .dpad{grid-template-columns:repeat(3,58px);grid-template-rows:repeat(3,58px);gap:6px;flex-shrink:0}
-  .dbtn{font-size:23px}
-  /* zona de acciones: grilla 2×2 de tamaño fijo */
-  .tc-actions{display:grid;grid-template-columns:84px 84px;grid-auto-rows:44px;gap:7px;
-    flex:0 0 auto;align-content:center}
-  /* cada botón: cara (A/B/…) + etiqueta pequeña al lado, altura fija, sin crecer */
-  .tcbtn{padding:0 8px;font-size:12px;display:flex;flex-direction:row;align-items:center;
-    justify-content:flex-start;gap:6px;height:44px;box-sizing:border-box;overflow:hidden;
-    border:1px solid var(--line-bright);background:#141414;border-radius:8px}
-  .tc-face{flex:0 0 auto;width:22px;height:22px;display:flex;align-items:center;justify-content:center;
-    border:1px solid var(--line-bright);border-radius:50%;font-size:11px;font-weight:bold;color:var(--ink-bright)}
-  .tc-start .tc-face, .tc-sel .tc-face{border-radius:5px;width:auto;padding:0 5px;font-size:12px}
-  .tc-lbl{font-size:11px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1}
-  /* A resaltado SOLO por color cuando hay interacción (no cambia de tamaño) */
-  .tc-a.hot{border-color:var(--amber-glow);background:rgba(255,190,80,0.12)}
-  .tc-a.hot .tc-face{border-color:var(--amber-glow);color:var(--amber-glow)}
-  .tc-a.hot .tc-lbl{color:var(--amber-glow)}
-  /* Start (menú) con un toque de acento ámbar suave */
-  .tc-start .tc-face{border-color:var(--amber);color:var(--amber-glow)}
+  /* el gamepad ya define tamaños fijos (dpad 120px, caras 48px) que van bien en
+     móvil; solo ajustamos el padding del contenedor para el pulgar. */
+  .pad-explore{padding:8px 14px 12px}
 
   .panel-h{font-size:11px;padding:3px 8px}
 
@@ -1112,27 +1206,37 @@ body.noscan::after{display:none}
   .modal-foot button,.modal-foot .btn{flex:1;min-width:120px;padding:11px;font-size:14px}
 
   /* acciones de combate grandes y cómodas para el pulgar */
-  /* ═══ BOTONES DE COMBATE EN MÓVIL: grilla ordenada y táctil ═══
-     Antes los botones se envolvían de forma irregular (unos anchos, otros
-     estrechos) y quedaban desalineados. Ahora usan una grilla de 2 columnas
-     con celdas del mismo tamaño: más fáciles de leer y de tocar con el dedo. */
+  /* ═══ BOTONES DE COMBATE EN MÓVIL: grilla 4×2 compacta (boceto del usuario) ═══
+     4 columnas a todo el ancho, botones pequeños. Así las 8 acciones caben en
+     2 filas sin scroll y el combate se ve completo por encima. */
   #cmdbar{
-    padding:8px 8px calc(8px + env(safe-area-inset-bottom));
-    display:grid;grid-template-columns:1fr 1fr;gap:6px;
+    padding:7px 7px calc(7px + env(safe-area-inset-bottom));
+    display:grid;grid-template-columns:repeat(4,1fr);gap:5px;
     justify-content:stretch;align-content:start;
-    overflow-y:auto;max-height:38vh;flex:0 0 auto;
+    overflow-y:auto;max-height:30vh;flex:0 0 auto;
     -webkit-overflow-scrolling:touch;
   }
   .cmd{
-    padding:12px 10px;font-size:14px;margin:0;
-    min-height:46px;display:flex;align-items:center;justify-content:center;
-    text-align:center;white-space:normal;line-height:1.2;
-    border-radius:5px;box-sizing:border-box;
+    padding:11px 2px;font-size:11px;margin:0;
+    min-height:44px;display:flex;align-items:center;justify-content:center;
+    text-align:center;white-space:normal;line-height:1.15;
+    border-radius:4px;box-sizing:border-box;letter-spacing:0;
   }
-  /* elementos que deben ocupar la fila completa: etiquetas, cancelar, mensajes */
-  #cmdbar > span.c-amber, #cmdbar > span.c-dim, #cmdbar > .cmd.wide,
-  #cmdbar > .cmd.danger{ grid-column:1 / -1; }
+  /* en móvil la tecla-atajo (A/H/…) se oculta: no hay teclado, ocupa espacio */
+  /* en móvil la tecla-atajo (A/H/…) NO se oculta —eso cortaba la primera letra y
+     se leía "tacar" en vez de "Atacar"—. Se muestra como letra normal, sin el
+     recuadro de tecla (en móvil no hay teclado, pero la letra es parte de la palabra). */
+  #cmdbar .cmd .key{
+    display:inline;border:none;background:none;padding:0;margin:0;
+    min-width:0;height:auto;line-height:inherit;font-size:inherit;
+    color:var(--ink-bright);font-weight:bold;
+  }
+  /* solo etiquetas de texto y mensajes ocupan fila completa; los botones (incluido
+     Huir) caben en la grilla 4×N como en el boceto */
+  #cmdbar > span.c-amber, #cmdbar > span.c-dim, #cmdbar > .cmd.wide{ grid-column:1 / -1; }
   #cmdbar > span.blink{ grid-column:1 / -1; text-align:center; }
+  /* botones de MOVER: fila propia arriba, cada uno ocupa media fila (2 de 4 col) */
+  #cmdbar > .cmd.move-cmd{ grid-column:span 2; min-height:40px; }
   /* ═══════════════════════════════════════════════════════════════════
      COMBATE EN MÓVIL — layout limpio y sin ambigüedad
      El problema anterior: en combate se veían los botones pero el viewport
@@ -1149,7 +1253,10 @@ body.noscan::after{display:none}
   #app.is-combat #col-left #viewport-panel{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
   #app.is-combat #col-left #viewport{ flex:1 1 auto; min-height:0; overflow:hidden; }
   #app.is-combat #col-right{ display:none !important; }   /* fuera crónica/estado en combate */
-  #app.is-combat #mvitals{ flex:0 0 auto; }
+  /* en COMBATE se oculta el HUD de vitales de exploración (VIT/KRO/ALI/HAM/SED/
+     SUE/LOC): el bloque "@ NOMBRE" dentro del área de combate ya muestra HP/Kr/
+     Al/Ca, que es lo que el boceto pide. Esa tabla aquí rompía el layout. */
+  #app.is-combat #mvitals{ display:none !important; }
   #app.is-combat #cmdbar{
     flex:0 0 auto;
     max-height:44vh;
@@ -1168,31 +1275,32 @@ body.noscan::after{display:none}
      exploración: ahí las filas deben quedar pegadas para formar la grilla) */
   #viewport.combat-mode .cb-list .vp-row, #viewport.combat-mode .cb-self .vp-row{line-height:1.4 !important;margin-bottom:2px}
 
-  /* ═══ COMBATE EN MÓVIL: sin superposiciones ═══
-     El viewport de exploración centra su contenido (justify-content:center),
-     pero en combate eso hacía que las tres zonas se solaparan al no caber.
-     En modo combate el contenido se alinea arriba y CADA zona tiene su sitio. */
+  /* ═══ COMBATE EN MÓVIL: paneles etiquetados que se reparten la pantalla ═══
+     El viewport de exploración centra su contenido, pero en combate cada panel
+     tiene su sitio: eje/tú/crónica fijos, combatientes flexibles con scroll. */
   #viewport.combat-mode{
     justify-content:flex-start !important;
     overflow:hidden;
-    padding:6px 8px;
+    padding:5px 7px;
+    gap:5px;
   }
-  #viewport.combat-mode .cb-axis{
-    flex:0 0 auto;
-    padding-bottom:5px;
-    border-bottom:1px solid var(--line);
-    margin-bottom:4px;
+  #viewport.combat-mode .cb-axis-sec{ flex:0 0 auto; }
+  #viewport.combat-mode .cb-list-sec{
+    flex:1 1 auto;min-height:44px;
+    -webkit-overflow-scrolling:touch;
   }
   #viewport.combat-mode .cb-list{
     flex:1 1 auto;min-height:0;overflow-y:auto;
     -webkit-overflow-scrolling:touch;
   }
+  #viewport.combat-mode .cb-self-sec{ flex:0 0 auto; }
   #viewport.combat-mode .cb-self{
     flex:0 0 auto;
-    border-top:1px solid var(--line-bright);
-    margin-top:5px;padding-top:6px;
     background:var(--bg);
-    max-height:40%;overflow-y:auto;
+  }
+  #viewport.combat-mode .cb-chronicle{
+    flex:0 0 auto;
+    max-height:92px;min-height:52px;
   }
   /* barras del jugador más estrechas en móvil para que quepan sin desbordar */
   #viewport.combat-mode .cb-self .hpbar-wrap{width:110px;height:15px}
@@ -1209,12 +1317,17 @@ body.noscan::after{display:none}
   .tc-wrap{padding:10px 8px 8px 12px}
 }
 
-/* pantallas muy estrechas: el D-pad y los botones de acción se mantienen GRANDES
-   (son lo que más se toca) — se recorta texto secundario en vez de achicar el tacto */
+/* pantallas muy estrechas: el D-pad y las caras se mantienen GRANDES (son lo que
+   más se toca). Se ajustan un poco para caber, sin volverse diminutos. */
 @media(max-width:380px){
-  .dpad{grid-template-columns:repeat(3,50px);grid-template-rows:repeat(3,50px);gap:6px}
-  .dbtn{font-size:16px}
-  .tcbtn{min-width:56px;padding:9px 10px;font-size:12px}
+  .dpad{width:132px;height:132px}
+  .dbtn{width:42px;height:42px;font-size:17px}
+  .dbtn.up,.dbtn.down{left:45px}
+  .dbtn.left,.dbtn.right{top:45px}
+  .dbtn.core{left:45px;top:45px}
+  .faces{grid-template-columns:52px 52px;grid-template-rows:52px 52px;gap:8px;width:112px}
+  .face{font-size:17px}
+  .sysbtn{min-width:96px;padding:8px 14px}
 }
 </style>
 </head>
@@ -1289,15 +1402,18 @@ body.noscan::after{display:none}
   </div>
 
   <!-- ===== Controles táctiles de EXPLORACIÓN (solo móvil) ===== -->
-  <div id="touchControlsExplore" class="tc-wrap" style="display:none">
-    <div class="dpad">
-      <div class="dbtn up"    data-dx="0" data-dy="-1" onclick="UI.touchMove(0,-1)">▲</div>
-      <div class="dbtn left"  data-dx="-1" data-dy="0" onclick="UI.touchMove(-1,0)">◀</div>
-      <div class="dbtn center" style="opacity:0;pointer-events:none"></div>
-      <div class="dbtn right" data-dx="1" data-dy="0" onclick="UI.touchMove(1,0)">▶</div>
-      <div class="dbtn down"  data-dx="0" data-dy="1" onclick="UI.touchMove(0,1)">▼</div>
+  <div id="touchControlsExplore" class="pad-explore" style="display:none">
+    <div class="pad-main">
+      <div class="dpad">
+        <div class="dbtn up"    data-dx="0" data-dy="-1" onclick="UI.touchMove(0,-1)">▲</div>
+        <div class="dbtn left"  data-dx="-1" data-dy="0" onclick="UI.touchMove(-1,0)">◀</div>
+        <div class="dbtn core"></div>
+        <div class="dbtn right" data-dx="1" data-dy="0" onclick="UI.touchMove(1,0)">▶</div>
+        <div class="dbtn down"  data-dx="0" data-dy="1" onclick="UI.touchMove(0,1)">▼</div>
+      </div>
+      <div class="faces" id="touchActions"></div>
     </div>
-    <div class="tc-actions" id="touchActions"></div>
+    <div class="sysrow" id="touchSysRow"></div>
   </div>
 </div>
 <script>
@@ -1334,20 +1450,20 @@ body.noscan::after{display:none}
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', initFastDpad);
   else initFastDpad();
 
-  // lo mismo para los botones de ACCIÓN (Interactuar/Examinar/Descansar/Menú):
-  // se generan dinámicamente y usan onclick; interceptamos el click fantasma tras
-  // un toque para que la acción no se dispare dos veces, y damos feedback inmediato.
+  // lo mismo para las caras A/B y la fila Select/Start: se generan dinámicamente
+  // y usan onclick; damos feedback inmediato al tocar (clase pressed).
   function initFastActions(){
-    var host=document.getElementById('touchActions');
-    if(!host) return;
-    var lastTouch=0;
-    host.addEventListener('touchstart', function(ev){
-      var btn=ev.target.closest('.tcbtn'); if(!btn) return;
-      lastTouch=Date.now(); btn.classList.add('pressed');
-    }, {passive:true});
-    host.addEventListener('touchend', function(ev){
-      var btn=ev.target.closest('.tcbtn'); if(btn) btn.classList.remove('pressed');
-    }, {passive:true});
+    ['touchActions','touchSysRow'].forEach(function(id){
+      var host=document.getElementById(id);
+      if(!host) return;
+      host.addEventListener('touchstart', function(ev){
+        var btn=ev.target.closest('.face,.sysbtn'); if(!btn) return;
+        btn.classList.add('pressed');
+      }, {passive:true});
+      host.addEventListener('touchend', function(ev){
+        var btn=ev.target.closest('.face,.sysbtn'); if(btn) btn.classList.remove('pressed');
+      }, {passive:true});
+    });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', initFastActions);
   else initFastActions();
@@ -1574,19 +1690,19 @@ DATA.spells = [
   {id:"chispa_vital", name:"Chispa Vital", branch:"luz",
    lvl:1, kros:6, dmg:[0,0], type:"heal", range:0, radius:0, target:"self",
    seq:"I–[Claridad]–9–15", concept:"Jöl·Aða·mín",
-   desc:"Sincronía biofotónica menor: la palma sobre el esternón cataliza ATP y cierra las heridas leves. La deuda arcana es difusa; el CMF la dispersa casi entera.",
+   desc:"Te curas 12–18 de vida. La sanación básica de la Luz, barata y sin efectos secundarios.",
    effect:{heal:[12,18]}, icon:"✚", color:"--green"},
 
   {id:"luz_restauradora", name:"Luz Restauradora", branch:"luz",
    lvl:3, kros:16, dmg:[0,0], type:"heal", range:0, radius:0, target:"self",
    seq:"I–[Claridad]–3–9–11–15", concept:"Jöl·Halír·Aða·pur",
-   desc:"OPN-M teje un puente de entrelazamiento que no solo repara tejido: la coherencia cuántica disuelve las firmas malévolas impresas en tu carne (quemadura, veneno, sangrado…). Purga y sana a la vez.",
+   desc:"Te curas 22–32 de vida Y eliminas todos tus estados negativos (quemadura, veneno, sangrado, etc.). Sana y purga a la vez.",
    effect:{heal:[22,32], cleanse:true}, icon:"✚", color:"--green"},
 
   {id:"comunion_luminosa", name:"Comunión Luminosa", branch:"luz",
    lvl:5, kros:44, dmg:[0,0], type:"heal", range:0, radius:0, target:"self",
    seq:"I–[Claridad]–3–9–15–20", concept:"Jöl·Halír·Aeth·rex",
-   desc:"La forma más alta de la sanación: mitosis acelerada sostenida por neuroplasticidad (Mudra 20). Cura profundamente y deja un aura que sigue reparándote varios turnos. El excedente de orden biológico se compensa lejos, en el tejido del CMF.",
+   desc:"Te curas 38–52 de vida de golpe y dejas un aura que te sigue curando 8 por turno durante varios turnos. La sanación más potente de la rama.",
    effect:{heal:[38,52], regenHeal:8}, icon:"❂", color:"--green"},
 
   {id:"guardian", name:"Virtud de Guardián", branch:"luz",
@@ -2230,11 +2346,11 @@ DATA.classes = {
 // ---------- SUBVARIANTES ----------
 // Cada subvariante pertenece a una clase base. Define stats, kit y habilidades.
 DATA.classes.wander={
-  id:"wander", name:"Vagabundo", rune:"◆", color:"--amber",
-  desc:"Sin escuela ni maestro: tu clase la escribes tú. Eliges tu propio repertorio de habilidades y, si quieres, despiertas la magia por una de sus tres formas.",
+  id:"wander", name:"Eco", rune:"◆", color:"--amber",
+  desc:"No hay escuela ni maestro: el Eco lo moldeas tú. Eliges tu propio repertorio de habilidades y, si quieres, despiertas la magia por una de sus tres formas.",
   primary:"libre", secondary:"libre",
   usesMagic:false,
-  blurb:"CLASE PERSONALIZADA: repertorio a elección, estadísticas libres, magia opcional (Mago, Brujo o Hechicero)."
+  blurb:"Sin clases: repertorio a elección, atributos libres, magia opcional (Mago, Brujo o Hechicero)."
 };
 
 DATA.subclasses = {
@@ -2441,6 +2557,47 @@ DATA.skills = {
     desc:"Golpeas un nervio: el enemigo pierde su próximo turno.", cost:4, costType:"stamina",
     type:"attack", dmgMult:1.2, effect:{stun:1}, target:"enemy"},
 
+  // ===== NUEVAS HABILIDADES DE ALIENTO =====
+  // Marciales cuerpo a cuerpo
+  barrido_bajo:{id:"barrido_bajo", name:"Barrido Bajo", icon:"↯", color:"--red",
+    desc:"Una patada baja que derriba: poco daño, pero desequilibra al enemigo y lo hace más lento un turno.", cost:3, costType:"stamina",
+    type:"attack", dmgMult:0.8, effect:{slow:2}, reqWeapon:"melee", target:"enemy"},
+  tajo_amplio:{id:"tajo_amplio", name:"Tajo Amplio", icon:"⟋", color:"--red",
+    desc:"Un arco horizontal que alcanza a TODOS los enemigos cercanos. El precio de golpear a varios: menos daño a cada uno.", cost:5, costType:"stamina",
+    type:"attack", dmgMult:1.0, reqWeapon:"melee", target:"all"},
+  estocada_precisa:{id:"estocada_precisa", name:"Estocada Precisa", icon:"→", color:"--amber",
+    desc:"Buscas el hueco en la guardia: alta probabilidad de crítico y perfora parte de la armadura.", cost:4, costType:"stamina",
+    type:"attack", dmgMult:1.4, critBonus:0.35, armorPierce:3, reqWeapon:"melee", target:"enemy"},
+  romper_guardia:{id:"romper_guardia", name:"Romper Guardia", icon:"⤫", color:"--red",
+    desc:"Un golpe brutal al escudo o los brazos: el enemigo queda expuesto y recibe más daño durante unos turnos.", cost:4, costType:"stamina",
+    type:"attack", dmgMult:1.1, effect:{vulnerable:3}, reqWeapon:"melee", target:"enemy"},
+  segundo_aliento:{id:"segundo_aliento", name:"Segundo Aliento", icon:"❧", color:"--green",
+    desc:"Regulas la respiración y recuperas algo de vida y compostura. No en cada pelea: cuesta caro en Aliento.", cost:6, costType:"stamina",
+    type:"buff", effect:{heal:14}, target:"self"},
+  finta:{id:"finta", name:"Finta", icon:"✕", color:"--cyan",
+    desc:"Amagas un golpe y confundes al rival: su siguiente ataque falla más y baja su puntería.", cost:2, costType:"stamina",
+    type:"debuff", effect:{confuse:2}, target:"enemy"},
+  // Arco / distancia
+  disparo_multiple:{id:"disparo_multiple", needsBow:true, name:"Disparo Múltiple", icon:"⋔", color:"--amber",
+    desc:"Sueltas tres flechas en abanico: daño moderado a todos los enemigos a la vista. Consume flechas extra.", cost:5, costType:"stamina",
+    type:"attack", dmgMult:0.9, reqWeapon:"ranged", target:"all"},
+  disparo_certero_debil:{id:"disparo_certero_debil", needsBow:true, name:"Tiro a las Piernas", icon:"↧", color:"--cyan",
+    desc:"Apuntas a las piernas: poco daño, pero ralentiza al enemigo para que no te alcance.", cost:3, costType:"stamina",
+    type:"attack", dmgMult:0.7, effect:{slow:3}, reqWeapon:"ranged", target:"enemy"},
+  rodar_disparar:{id:"rodar_disparar", needsBow:true, name:"Rodar y Disparar", icon:"↺", color:"--green",
+    desc:"Ruedas hacia atrás ganando distancia y sueltas un tiro rápido: hieres al enemigo y lo dejas ralentizado para mantener las distancias.", cost:4, costType:"stamina",
+    type:"attack", dmgMult:1.0, effect:{slow:2}, reqWeapon:"ranged", target:"enemy"},
+  // Utilidad / defensa (sin requisito de arma)
+  concentracion:{id:"concentracion", name:"Concentración", icon:"◎", color:"--violet",
+    desc:"Vacías la mente un instante: tu siguiente ataque no puede fallar y golpea como crítico.", cost:3, costType:"stamina",
+    type:"buff", effect:{aim:1}, target:"self"},
+  aguantar:{id:"aguantar", name:"Aguantar el Tipo", icon:"⛨", color:"--amber",
+    desc:"Aprietas los dientes y reduces mucho el daño de los próximos golpes.", cost:3, costType:"stamina",
+    type:"buff", effect:{guard:3}, target:"self"},
+  intimidar:{id:"intimidar", name:"Intimidar", icon:"‼", color:"--red",
+    desc:"Un rugido que hiela la sangre: el enemigo duda, pierde iniciativa y ataca peor un par de turnos.", cost:2, costType:"stamina",
+    type:"debuff", effect:{fear:2}, target:"enemy"},
+
 };
 
 // Devuelve la lista de IDs de habilidades que el personaje conoce (las que eligió
@@ -2453,6 +2610,15 @@ function availableSkills(p){
   // creaciones interrumpidas, para que el botón "Habilidad" y el menú las muestren.
   if(p && (!p.skills || !p.skills.length) && p._creationBuild && p._creationBuild.repertoire && p._creationBuild.repertoire.length){
     p.skills = p._creationBuild.repertoire.filter(id=>DATA.skills[id]);
+  }
+  // ÚLTIMA RED: un Eco NO mago que sigue sin habilidades (partida vieja con el bug,
+  // o build sin repertorio) recibe las de su subclase, o un set marcial genérico.
+  if(p && p.cls!=='magic' && (!p.skills || !p.skills.length)){
+    let subDef = DATA.subclasses && DATA.subclasses[p.subclass];
+    let base = (subDef && subDef.skills && subDef.skills.length) ? subDef.skills.slice()
+             : (p.cls==='ranged' ? ['disparo_certero','apuntar','paso_atras']
+                                   : ['golpe_poderoso','postura_defensiva','embate']);
+    p.skills = base.filter(id=>DATA.skills[id]);
   }
   if(p && Array.isArray(p.skills)){
     for(let id of p.skills){ if(!out.includes(id)) out.push(id); }
@@ -3280,12 +3446,12 @@ DATA.events = [
     text:"Una figura encapuchada emerge de las sombras arrastrando un carro de baratijas. «Mercancía rara para el viajero audaz», susurra.",
     options:[
       {label:"Comprar un elixir (30 esq.)", fn:(G)=>{
-        if(G.player.gold>=30){ G.player.gold-=30; addToInventory({kind:'consumable',id:'pocion_mayor',qty:1});
+        if(playerFunds() >=30){ spendFunds(30); addToInventory({kind:'consumable',id:'pocion_mayor',qty:1});
           return "Intercambias 30 esquirlas por un Elixir de Sutura Mayor."; }
         return "No tienes suficientes esquirlas. El mercader chasquea la lengua.";
       }},
       {label:"Comprar un arma misteriosa (50 esq.)", fn:(G)=>{
-        if(G.player.gold>=50){ G.player.gold-=50;
+        if(playerFunds() >=50){ spendFunds(50);
           let pool=DATA.weapons.filter(w=>w.tier<=2&&!w.focusType);
           let w=rpick(pool); addToInventory({kind:'weapon',id:w.id,qty:1});
           return "Compras un arma envuelta en tela: ¡es "+w.name+"!"; }
@@ -3337,7 +3503,7 @@ DATA.events = [
     text:"Trece cristales flotan en círculo alrededor de un pedestal vacío. Es un santuario del Oráculo de las Constelaciones. Puedes ofrendar para recibir su bendición.",
     options:[
       {label:"Ofrendar esquirlas (20)", fn:(G)=>{
-        if(G.player.gold>=20){ G.player.gold-=20;
+        if(playerFunds() >=20){ spendFunds(20);
           let buffs=["Bendición de Vigor: +vida máxima","Bendición de Poder: recuperas todo","Bendición del Vidente"];
           let r=G.rng();
           if(r<0.5){ G.player.hp=G.player.hpMax; G.player.kros=G.player.krosMax; G.player.stamina=G.player.staminaMax;
@@ -5609,6 +5775,82 @@ function loadSanctuary(){
 function saveSanctuary(){
   try{ let ls=safeStorage(); if(ls&&SAN) ls.setItem(_sk('amsalor_sanctuary'), JSON.stringify(SAN)); }catch(e){}
 }
+// ═══ FONDOS COMBINADOS: bolsa (p.gold) + banco del Santuario (SAN.shards) ═══
+// El usuario quiere que al comprar/reparar/cocinar/adiestrar cuenten las esquirlas
+// que tenga en la bolsa Y las que tenga guardadas en el Santuario. Estas dos
+// funciones lo centralizan: playerFunds() = total disponible; spendFunds(n) gasta
+// primero de la bolsa y, si no alcanza, toma el resto del banco.
+function playerFunds(){
+  let g=(G&&G.player&&G.player.gold)||0;
+  let s=(typeof SAN!=='undefined'&&SAN&&SAN.shards)||0;
+  return g+s;
+}
+window.playerFunds=playerFunds;
+function spendFunds(n){
+  n=Math.max(0,Math.floor(n||0));
+  if(playerFunds()<n) return false;
+  let p=G&&G.player; if(!p) return false;
+  let fromBag=Math.min(p.gold||0, n);
+  p.gold=(p.gold||0)-fromBag;
+  let rest=n-fromBag;
+  if(rest>0 && typeof SAN!=='undefined' && SAN){
+    SAN.shards=Math.max(0,(SAN.shards||0)-rest);
+    if(typeof saveSanctuary==='function') saveSanctuary();
+  }
+  return true;
+}
+window.spendFunds=spendFunds;
+// etiqueta de saldo para las pantallas de compra/servicio: muestra el TOTAL
+// disponible (bolsa + banco del Santuario) y, si hay banco, el desglose.
+function fundsLabel(){
+  let p=G&&G.player;
+  let bag=(p&&p.gold)||0;
+  let bank=(typeof SAN!=='undefined'&&SAN&&SAN.shards)||0;
+  let total=bag+bank;
+  let breakdown = bank>0 ? ' <span class="small c-dim">('+bag+' bolsa + '+bank+' Santuario)</span>' : '';
+  return '<span class="c-gold" title="Esquirlas en tu bolsa + las guardadas en el Santuario">'+total+'</span>'+breakdown;
+}
+window.fundsLabel=fundsLabel;
+// ═══ INGREDIENTES COMBINADOS: inventario + almacén del Santuario ═══
+// Para cocinar (y recetas), los ingredientes pueden estar en la bolsa o guardados
+// en el almacén. countItem cuenta en ambos; consumeItem descuenta primero de la
+// bolsa y luego del almacén, sin que el jugador tenga que equiparse/retirarlos.
+function countItemAnywhere(id){
+  let n=0;
+  let p=G&&G.player;
+  if(p&&p.inventory) for(let it of p.inventory){ if(it.id===id) n+=(it.qty||1); }
+  if(typeof SAN!=='undefined'&&SAN&&SAN.storage) for(let it of SAN.storage){ if(it.id===id) n+=(it.qty||1); }
+  return n;
+}
+window.countItemAnywhere=countItemAnywhere;
+function consumeItemAnywhere(id, qty){
+  qty=Math.max(1,Math.floor(qty||1));
+  if(countItemAnywhere(id)<qty) return false;
+  let p=G&&G.player;
+  // 1) descontar de la bolsa
+  if(p&&p.inventory){
+    for(let i=p.inventory.length-1;i>=0 && qty>0;i--){
+      let it=p.inventory[i];
+      if(it.id!==id) continue;
+      let take=Math.min(it.qty||1, qty);
+      it.qty=(it.qty||1)-take; qty-=take;
+      if(it.qty<=0) p.inventory.splice(i,1);
+    }
+  }
+  // 2) lo que falte, del almacén del Santuario
+  if(qty>0 && typeof SAN!=='undefined' && SAN && SAN.storage){
+    for(let i=SAN.storage.length-1;i>=0 && qty>0;i--){
+      let it=SAN.storage[i];
+      if(it.id!==id) continue;
+      let take=Math.min(it.qty||1, qty);
+      it.qty=(it.qty||1)-take; qty-=take;
+      if(it.qty<=0) SAN.storage.splice(i,1);
+    }
+    if(typeof saveSanctuary==='function') saveSanctuary();
+  }
+  return qty<=0;
+}
+window.consumeItemAnywhere=consumeItemAnywhere;
 // las mejoras del Santuario: permanentes, benefician a todos los Ecos futuros
 DATA.sanctuaryUpgrades=[
   {id:'almacen1', name:'Almacén I', cost:120, desc:'+8 de capacidad de carga en incursiones.', req:null},
@@ -6217,31 +6459,52 @@ DATA.spells.push(
   {id:"paso_umbral", name:"Paso Umbral", branch:"oscuridad", lvl:1, kros:8,
    dmg:[0,0], type:"buff", target:"self", range:0,
    effect:{blink:6, stealth:1}, seq:"D–[Umbra]–2–17", concept:"Neth·loc·um",
-   desc:"Decoherencia controlada: tu firma se disuelve un instante y reapareces lejos del enemigo, medio velado en penumbra. La identidad de la Oscuridad — no golpear más fuerte, sino no estar donde te buscan.",
+   desc:"Te teletransportas lejos del enemigo y quedas oculto (sigilo) un turno. La identidad de la Oscuridad: no estar donde te buscan.",
    icon:"◌", color:"--violet"},
   {id:"salto_sombrio", name:"Salto Sombrío", branch:"oscuridad", lvl:3, kros:15,
    dmg:[0,0], type:"buff", target:"self", range:0,
    effect:{blink:10, stealth:2, evasion:2}, seq:"D–[Umbra]–2–14–17", concept:"Neth·loc·rex·um",
-   desc:"Un pliegue mayor del espacio: cruzas la sala entera en un parpadeo, envuelto en ocultación y con los reflejos afilados por un par de turnos. Reaparecer intacto es su propia forma de ganar.",
+   desc:"Te teletransportas a cualquier punto del campo, quedas oculto (sigilo 2) y ganas evasión un par de turnos. Reposicionamiento total.",
    icon:"◍", color:"--violet-bright"},
 
   // MATERIALIZACIÓN (ψ≥0.7): creación de materia efímera (arma/estructura).
   {id:"filo_instanciado", name:"Filo Instanciado", branch:"materializacion", lvl:1, kros:7,
    dmg:[0,0], type:"buff", target:"self", range:0,
    effect:{conjureWeapon:{turns:4, bonus:6, element:"masa"}}, seq:"A–[Instancia]–6–12", concept:"Mat·ef·on",
-   desc:"Condensas materia efímera en el filo de tu arma: masa real, sostenida por coherencia, que suma peso a cada golpe unos turnos. La identidad de la rama — no lanzar fuego, sino FABRICAR lo que necesitas.",
+   desc:"Tus ataques hacen +6 de daño durante 4 turnos (materia condensada en tu arma). La identidad de la rama: fabricar lo que necesitas.",
    icon:"⬔", color:"--cyan"},
   {id:"arsenal_efimero", name:"Arsenal Efímero", branch:"materializacion", lvl:3, kros:18,
    dmg:[0,0], type:"buff", target:"self", range:0,
    effect:{conjureWeapon:{turns:6, bonus:12, element:"masa"}, shield:25}, seq:"A–[Instancia]–6–7–12", concept:"Mat·ef·teg·on",
-   desc:"Instancias a la vez un arma densa y una placa de materia sostenida: atacas más fuerte y absorbes daño mientras la coherencia aguante. Si tu ψ cae durante el sostenimiento, todo se deshace — el riesgo canónico de la rama.",
+   desc:"Tus ataques hacen +12 de daño durante 6 turnos Y ganas un escudo que absorbe 25 de daño. Arma y armadura conjuradas a la vez.",
    icon:"⬖", color:"--cyan"},
+
+  // CUATRIMENTAL (0.4≤ψ≤0.6): manipulación de los estados de la materia.
+  {id:"chispa_elemental", name:"Chispa Elemental", branch:"cuatrimental", lvl:1, kros:6,
+   dmg:[8,13], type:"proyectil", target:"enemy", range:2,
+   effect:{burn:2}, seq:"O–[Cuatro]–5–8", concept:"Þar·ele·on",
+   desc:"Proyectil de corto alcance: 8–13 de daño y prende al enemigo (quemadura 2 turnos). El primer canal elemental de la rama.",
+   icon:"✸", color:"--red"},
+
+  // NEUROMANCIA (0.48≤ψ≤0.52): modulación neural precisa e ilusión.
+  {id:"alfiler_sinaptico", name:"Alfiler Sináptico", branch:"neuromancia", lvl:1, kros:7,
+   dmg:[5,9], type:"proyectil", target:"enemy", range:2,
+   effect:{confuse:2}, seq:"O–[Neura]–7–12", concept:"Syn·pin·um",
+   desc:"Proyectil de corto alcance: 5–9 de daño y confunde al enemigo (falla más y pierde puntería) 2 turnos. La identidad de la rama: atacar el nervio, no el cuerpo.",
+   icon:"⌇", color:"--cyan"},
+
+  // ECOLALIA (0.5≤ψ≤0.7): comunicación con fauna/flora.
+  {id:"chasquido_armonico", name:"Chasquido Armónico", branch:"ecolalia", lvl:1, kros:6,
+   dmg:[7,11], type:"resonancia", target:"enemy", range:2,
+   seq:"O–[Eco]–7", concept:"Hal·chas·on",
+   desc:"Proyectil sónico de corto alcance: 7–11 de daño. El primer paso del diálogo con lo vivo — aprender a hacerte oír.",
+   icon:"♪", color:"--green"},
 
   // ECOLALIA (0.5≤ψ≤0.7): control ecológico ARMÓNICO (además de invocar fauna).
   {id:"armonia_ecosistema", name:"Armonía del Ecosistema", branch:"ecolalia", lvl:3, kros:16,
    dmg:[0,0], type:"buff", target:"self", range:0,
    effect:{regenHeal:6, aim:3}, seq:"L–[Eco]–3–15–20", concept:"Hal·vit·rex",
-   desc:"Afinas tu firma con el ritmo del entorno: el ecosistema responde reparándote poco a poco y aguzando tus sentidos. No dominas la naturaleza — negocias con ella en su propia frecuencia.",
+   desc:"Te curas 6 por turno durante 3 turnos y tu puntería mejora (aim) ese tiempo. Sintonizas con el entorno para regenerarte y afinar tus sentidos.",
    icon:"❧", color:"--green"}
 );
 // (lanza_termica ya existe en el catálogo base — el duplicado fue retirado;
@@ -7582,7 +7845,7 @@ Game.openPetKennel=function(){
       </div></div>`;
   }
   if(!bvBuilt) html+='<div class="small c-dim mt" style="font-style:italic">◈ Construye el Bestiario Vivo para desbloquear bestias exóticas y abaratar el adiestramiento.</div>';
-  html+=`<div class="small c-dim mt">Adiestrar sube el bono pasivo (${passiveLabelGeneric()}) y la eficacia en combate. Esquirlas: <span class="c-gold">${p.gold}</span></div>`;
+  html+=`<div class="small c-dim mt">Adiestrar sube el bono pasivo (${passiveLabelGeneric()}) y la eficacia en combate. Esquirlas: ${fundsLabel()}</div>`;
   openModal('◍ PERRERA Y PAJARERA', html, [{label:'◂ Volver', action:()=>openCampfire()},{label:'Cerrar',action:'close'}]);
 };
 function passiveLabelGeneric(){ return 'visión/botín/evasión según la especie'; }
@@ -7600,8 +7863,8 @@ Game.trainPet=function(pid){
   let tl=SAN.petTraining[pid]||0;
   if(tl>=3){ logMsg('Esta mascota ya alcanzó la maestría.','flavor'); return; }
   let cost=Math.round((80+tl*60) * ((typeof sanBuilt==='function'&&sanBuilt('bestiario_vivo'))?0.75:1));
-  if(p.gold<cost){ logMsg('No te alcanza para adiestrarla.','bad'); return; }
-  p.gold-=cost;
+  if(playerFunds() <cost){ logMsg('No te alcanza para adiestrarla.','bad'); return; }
+  spendFunds(cost);
   SAN.petTraining[pid]=tl+1;
   saveSanctuary();
   logMsg('◍ Adiestras a '+DATA.pets[pid].name+' (nivel '+(tl+1)+'/3). Su instinto se afila.','good');
@@ -7637,6 +7900,11 @@ function makePlayer(opts){
     stats: opts.stats,              // {fuerza, destreza, vigor, voluntad, intelecto, percepcion}
     // progression
     level:1, xp:0, krosLevel:1,
+    // ÁRBOL DE HABILIDADES: puntos para gastar en el árbol (se ganan al subir de
+    // nivel). El Eco empieza con 1 punto para que pueda tocar el árbol desde ya.
+    skillPoints: 1,
+    skillNodes: [],                 // nodos del árbol ya comprados
+    fusedClass: null,               // clase fusionada activa (si desbloqueó dos vías)
     unlockedClasses:[opts.cls],     // clases desbloqueadas
     // resources (current)
     hp:0, hpMax:0,
@@ -9755,14 +10023,34 @@ Game.removeNote=function(idx){
 //  El alcance de cada arma/hechizo decide si puedes golpear.
 // ============================================================
 function rangeOfWeapon(wd){
-  if(wd&&wd.reach)return wd.reach;   // el arma define su propio alcance
+  // REGLAS DE ALCANCE (jugador = posición 0). El daño de las armas a distancia
+  // decae con la lejanía (falloff), pero TODAS alcanzan de cerca:
+  //   · cuerpo a cuerpo (espadas, dagas, mazas): 0–2
+  //   · lanzas / armas de asta: 0–3
+  //   · arcos / ballestas / hondas: 0 hasta su máximo (llegan lejos, daño decae)
+  let ranged = wd && (wd.ranged || (wd.stat==='destreza' && /arco|ballesta|honda|jabalina/i.test(wd.id||'')));
+  let esLanza = wd && /lanza|pica|alabarda|asta|venablo|tridente/i.test(wd.id||'');
+  if(ranged){
+    // arcos: respetan su reach si lo traen (llega lejos); si no, por su `range`
+    if(wd.reach) return [0, Math.max(4, wd.reach[1])];
+    let r=(wd&&wd.range)||1;
+    if(r>=5) return [0,9];
+    if(r===4) return [0,8];
+    if(r>=3) return [0,6];
+    return [0,5];
+  }
+  // CUERPO A CUERPO y LANZAS: siempre alcanzan pegado a ti (desde 0). Si el arma
+  // trae un reach que empieza en 1, se corrige a 0 (antes el estoque y otras no
+  // llegaban a la casilla de al lado). Se aplican los topes: melee 2, lanza 3.
+  let tope = esLanza ? 3 : 2;
+  if(wd && wd.reach){
+    let mx = Math.min(wd.reach[1], tope);   // nunca por encima del tope de su tipo
+    return [0, Math.max(1, mx)];            // desde 0 siempre
+  }
   let r=(wd&&wd.range)||1;
-  // las armas de distancia llegan lejos Y de cerca (el falloff ajusta el daño según la distancia)
-  if(r>=5)return [0,9];
-  if(r===4)return [0,8];
-  if(r===3)return [0,6];
-  if(r===2)return [0,4];
-  return [0,2];
+  if(esLanza) return [0,3];
+  if(r>=3) return [0, tope];
+  return [0, tope];
 }
 // ═══ VOLUNTAD: resistencia al DAÑO MÁGICO ajeno (Codex) ═══
 // La Voluntad no optimiza tus hechizos, pero blinda tu Núcleo contra el CMF
@@ -9821,29 +10109,62 @@ function axisRangeLabel(min,max){
 }
 window.axisMeters=axisMeters; window.axisRangeLabel=axisRangeLabel;
 
-// COMPRESIÓN DEL ALCANCE MÁGICO: el `range` crudo de los datos (0–10) se comprime
-// a un eje más corto, porque a plena escala los hechizos "cruzaban" toda la sala y
-// se sentían larguísimos. La nueva escala:
-//   toque → 0–1 (adyacente) · corto → 0–3 · medio → 0–5 · largo → 0–7 (tope).
-// El daño ya decae con la distancia (falloff), así que acortar el alcance hace el
-// posicionamiento importante sin castrar a los magos.
+// ALCANCE MÁGICO POR NIVEL (Codex, Ficha técnica): la distancia de un hechizo
+// escala con su nivel. El Codex fija 10–20 m (nv1) … 50–100 m (nv5); traducido al
+// eje táctico de combate (0–10) y comprimido para que el posicionamiento importe:
+//   nivel 1 → 0–2 (corto)   nivel 2 → 0–4   nivel 3 → 0–5
+//   nivel 4 → 0–7           nivel 5 → 0–9 (casi toda la sala)
+// El daño ya decae con la distancia (falloff), así que un hechizo de nivel bajo es
+// de verdad de corto alcance, no cruza el campo entero.
+function spellRangeByLevel(lvl){
+  switch(lvl){
+    case 1: return 2;
+    case 2: return 4;
+    case 3: return 5;
+    case 4: return 7;
+    case 5: return 9;
+    default: return lvl>5?9:2;
+  }
+}
+window.spellRangeByLevel=spellRangeByLevel;
+// (se mantiene compressSpellRange por compatibilidad con quien la llame, pero el
+// alcance real de un hechizo lo decide su NIVEL vía spellRangeByLevel)
 function compressSpellRange(r){
   if(r<=1) return 1;
-  if(r<=3) return 3;   // dardos, chispas: corto
-  if(r<=5) return 4;   // proyectiles medios
-  if(r<=7) return 5;   // conjuros de alcance medio-largo
-  return 6;            // los antes 8–10: ahora tope 6 (no cruzan toda la sala)
+  if(r<=3) return 3;
+  if(r<=5) return 4;
+  if(r<=7) return 5;
+  return 6;
 }
 function rangeOfSpell(s){
-  if(!s)return [0,6];
-  if(s.reach)return s.reach;                       // override explícito
-  if(s.target==='enemy'){
-    // toque: cuerpo a cuerpo (0–1); resto: 0 hasta su alcance COMPRIMIDO
-    if(s.type==='toque') return [0,1];
-    let r=(s.range!=null?s.range:5);
-    return [0, compressSpellRange(r)];
+  if(!s)return [0,2];
+  // el alcance máximo lo marca el NIVEL del hechizo (Codex). Esto ACOTA incluso a
+  // los hechizos con `reach` explícito: el reach define la forma (dónde empieza,
+  // p. ej. un toque en 0–1), pero un hechizo de nivel 1 nunca cruza el campo.
+  let byLvl = spellRangeByLevel(s.lvl||1);
+  if(s.target!=='enemy'){
+    // campo / tierra / uno mismo: no "alcanzan" a un rival, sin límite de nivel
+    if(s.reach) return s.reach;
+    return [0,10];
   }
-  return [0,10];                                    // campo / tierra / uno mismo
+  // toque: cuerpo a cuerpo (0–1), no se toca
+  if(s.type==='toque') return [0,1];
+  if(s.reach){
+    // respetar el mínimo del reach (zona muerta) pero acotar el máximo al nivel.
+    // Si la zona muerta empieza más lejos de lo que el nivel permite, se colapsa a
+    // 0 (un hechizo de nivel bajo no puede tener una zona muerta más larga que su
+    // propio alcance; quedaría inservible, como Aguja Luminar en [3,3]).
+    let mn = s.reach[0]||0;
+    let mx = Math.min(s.reach[1], byLvl);
+    if(mn>mx) mn=0;
+    if(mx<1) mx=1;
+    return [mn, mx];
+  }
+  if(s.range!=null){
+    let compressed = compressSpellRange(s.range);
+    return [0, Math.min(byLvl, compressed)];
+  }
+  return [0, byLvl];
 }
 function rangeOfSkill(k){
   if(!k) return [0,1];
@@ -11700,7 +12021,10 @@ function endCombat(result){
   // morir), el layout de combate queda pegado y tapa/rompe la pantalla siguiente
   // (incluida la de muerte) en móvil.
   { let _app=document.getElementById('app'); if(_app) _app.classList.remove('is-combat');
-    let _vp=document.getElementById('viewport'); if(_vp) _vp.classList.remove('combat-mode'); }
+    let _vp=document.getElementById('viewport'); if(_vp) _vp.classList.remove('combat-mode');
+    // PC: restaurar la etiqueta del panel derecho (era "CRÓNICA DE COMBATE" durante
+    // la pelea) a la crónica normal de exploración.
+    let _lp=document.getElementById('log-panel'); if(_lp){ let _h=_lp.querySelector('.panel-h span'); if(_h) _h.textContent='CRÓNICA'; } }
   // móvil: restaurar el zoom del mapa al salir del combate
   setTimeout(()=>{ if(typeof fitViewport==='function') fitViewport(); }, 50);
   let c=G.combat;
@@ -12040,6 +12364,7 @@ function resolvePlayerAttackPart(target, part){
 //  AMSALOR — UI.JS (parte 1: render de combate, status, barras)
 // ============================================================
 
+let _recentLog=[];   // últimas líneas del log, para el mini-log de combate
 function logMsg(text, cls){
   let log=document.getElementById('log');
   let div=document.createElement('div');
@@ -12049,7 +12374,13 @@ function logMsg(text, cls){
   log.scrollTop=log.scrollHeight;
   // cap
   while(log.children.length>200) log.removeChild(log.firstChild);
+  // recordar las últimas líneas (texto plano) para la crónica de combate
+  _recentLog.push({text:text, cls:cls||''});
+  if(_recentLog.length>14) _recentLog.shift();
+  // si estamos en combate, refrescar la crónica fija (zona propia con scroll)
+  if(typeof G!=='undefined' && G && G.inCombat && typeof refreshCombatChronicle==='function') refreshCombatChronicle();
 }
+window.getRecentLog=function(n){ return _recentLog.slice(-(n||3)); };
 
 function kbdHtml(k){ return '<span class="kbd">'+k+'</span>'; }
 
@@ -13510,12 +13841,13 @@ function consume(inv){
 UI.craft=function(recipeId){
   let r=DATA.recipes.find(x=>x.id===recipeId);
   if(!r)return;
-  if(!r.need.every(([id,qty])=>countItem(id)>=qty)){ logMsg('Materiales insuficientes.','bad'); return; }
-  // consume
+  // los materiales pueden estar en la bolsa O en el almacén del Santuario
+  let countFn = (typeof countItemAnywhere==='function')?countItemAnywhere:countItem;
+  if(!r.need.every(([id,qty])=>countFn(id)>=qty)){ logMsg('Materiales insuficientes.','bad'); return; }
+  // consume (primero de la bolsa, luego del almacén, sin tener que retirarlos)
   for(let [id,qty] of r.need){
-    let inv=G.player.inventory.find(i=>i.id===id);
-    inv.qty-=qty;
-    if(inv.qty<=0)G.player.inventory=G.player.inventory.filter(i=>i!==inv);
+    if(typeof consumeItemAnywhere==='function'){ consumeItemAnywhere(id, qty); }
+    else { let inv=G.player.inventory.find(i=>i.id===id); if(inv){ inv.qty-=qty; if(inv.qty<=0)G.player.inventory=G.player.inventory.filter(i=>i!==inv); } }
   }
   // produce
   let kind = DATA.weapons.find(w=>w.id===r.out)?'weapon':DATA.armor.find(a=>a.id===r.out)?'armor':'consumable';
@@ -14085,7 +14417,7 @@ function openForge(){
     let cost=Math.max(0,Math.ceil(missing*disc));
     let pct=Math.round(cur/mx*100);
     let col=cur<=0?'--red':pct<40?'--ink-bright':'--green';
-    html+=`<div class="lrow" style="cursor:${missing>0&&p.gold>=cost?'pointer':'default'}" ${missing>0&&p.gold>=cost?`onclick="UI.forgeRepair('${slot}')"`:''}>
+    html+=`<div class="lrow" style="cursor:${missing>0&&playerFunds() >=cost?'pointer':'default'}" ${missing>0&&playerFunds() >=cost?`onclick="UI.forgeRepair('${slot}')"`:''}>
       <span class="nm">${it.glyph} ${it.name}${cur<=0?' <span class="c-red">[ROTO]</span>':''}</span>
       <span class="meta" style="color:${getCssVar(col)}">${cur}/${mx}${missing>0?' · reparar: '+cost+' esq.':' · intacto'}</span>
     </div>`;
@@ -14108,14 +14440,14 @@ function openForge(){
       let used=b.max-b.left, cost=used*4;
       html+=`<hr class="divider"><div class="small"><span class="c-violet">❦ ${w.name}</span> — vínculo ${(DATA.branches[b.branch]||{}).name||b.branch}: <span class="${b.left<=3?'c-red':''}">${b.left}/${b.max}</span> intervenciones.</div>`;
       _thetaBtn={label:'❦ Recarga Theta ('+cost+' esq.)', action:()=>{
-        if(p.gold<cost){ logMsg('Necesitas '+cost+' esquirlas para la Recarga Theta.','bad'); return; }
-        p.gold-=cost; b.left=b.max;
+        if(playerFunds() <cost){ logMsg('Necesitas '+cost+' esquirlas para la Recarga Theta.','bad'); return; }
+        spendFunds(cost); b.left=b.max;
         logMsg('❦ La cámara de resonancia zumba a 6 Hz durante una hora. La coherencia del grimorio se restaura ('+b.max+'/'+b.max+').','magic');
         updateUI(); openForge();
       }};
     }
   }
-  html+=`<div class="small c-dim mt">Esquirlas: <span class="c-gold">${p.gold}</span></div>`;
+  html+=`<div class="small c-dim mt">Esquirlas: ${fundsLabel()}</div>`;
   let btns=[{label:'Cerrar',action:'close'}];
   if(_thetaBtn) btns.unshift(_thetaBtn);
   // FORJAR LA LLAVE DE LA SALIDA: si reuniste los 3 fragmentos y no la tienes aún
@@ -14167,7 +14499,7 @@ Game.openSmithUpgrade=function(){
     let req=smithReq(lvl+1);
     let matDef=DATA.consumables.find(c=>c.id===req.matId);
     let have=(p.inventory.find(i=>i.id===req.matId)||{qty:0}).qty;
-    let canMat=have>=req.matQty, canGold=p.gold>=req.gold;
+    let canMat=have>=req.matQty, canGold=playerFunds() >=req.gold;
     let can=canMat&&canGold;
     let bonus = slot==='weapon' ? ('+'+(lvl+1)+' daño') : ('+'+Math.ceil((lvl+1)*0.6)+' def');
     html+=`<div class="lrow" style="display:block;${can?'cursor:pointer':'opacity:0.6'}" ${can?`onclick="Game.doSmithUpgrade('${slot}')"`:''}>
@@ -14178,7 +14510,7 @@ Game.openSmithUpgrade=function(){
       </div></div>`;
   }
   if(!any) html+='<div class="c-dim small">No llevas equipo mejorable. Equipa un arma o armadura.</div>';
-  html+=`<div class="small c-dim mt">Esquirlas: <span class="c-gold">${p.gold}</span></div>`;
+  html+=`<div class="small c-dim mt">Esquirlas: ${fundsLabel()}</div>`;
   openModal('⚒ BÖRK — MEJORA DE EQUIPO', html, [{label:'◂ Volver', action:()=>openForge()},{label:'Cerrar',action:'close'}]);
 };
 // ═══ EL TELAR RÚNICO: grabar runas en equipo (Codex Cap. XVI) ═══
@@ -14210,7 +14542,7 @@ Game.openRuneForge=function(){
         // Interferencia: ¿hay una runa opuesta ya grabada?
         let interf = rd.opposesEl && runes.some(r2=>{let o=runeById(r2); return o&&(o.element===rd.opposesEl||o.id===rd.opposesEl);});
         let cost=60+runes.length*40;
-        let can=p.gold>=cost;
+        let can=playerFunds() >=cost;
         html+=`<span class="cmd" style="font-size:11px;${can?'':'opacity:0.5'};${interf?'border:1px solid var(--red)':''}" ${can?`onclick="Game.engraveRune('${slot}','${rd.id}')"`:''} title="${rd.desc}${interf?' ⚠ INTERFERENCIA: runa opuesta grabada — generará chispas.':''}">${rd.glyph} ${rd.name} (${cost})</span> `;
       }
       html+='</div>';
@@ -14220,7 +14552,7 @@ Game.openRuneForge=function(){
     html+='</div>';
   }
   if(!anyItem) html+='<div class="c-dim small">No llevas equipo grabable. Equipa un arma o armadura (los focos mágicos no admiten runas).</div>';
-  html+=`<div class="small c-dim mt">Esquirlas: <span class="c-gold">${p.gold}</span></div>`;
+  html+=`<div class="small c-dim mt">Esquirlas: ${fundsLabel()}</div>`;
   openModal('ᛜ EL TELAR RÚNICO', html, [{label:'◂ Volver', action:()=>openForge()},{label:'Cerrar',action:'close'}]);
 };
 Game.engraveRune=function(slot, runeId){
@@ -14231,10 +14563,10 @@ Game.engraveRune=function(slot, runeId){
   if(it.runes.length>=4){ logMsg('El material está saturado: no admite más runas.','bad'); return; }
   if(it.runes.includes(runeId))return;
   let cost=60+it.runes.length*40;
-  if(p.gold<cost){ logMsg('No te alcanza para el grabado.','bad'); return; }
+  if(playerFunds() <cost){ logMsg('No te alcanza para el grabado.','bad'); return; }
   // ¿interferencia por elemento opuesto?
   let interf = rd.opposesEl && it.runes.some(r2=>{let o=runeById(r2); return o&&(o.element===rd.opposesEl||o.id===rd.opposesEl);});
-  p.gold-=cost;
+  spendFunds(cost);
   it.runes.push(runeId);
   // FATIGA DEL MATERIAL: −20% de durabilidad máxima por runa
   if(it.durMax){ it.durMax=Math.max(1,Math.floor(it.durMax*0.8)); if(it.dur>it.durMax)it.dur=it.durMax; }
@@ -14256,9 +14588,9 @@ Game.doSmithUpgrade=function(slot){
   let req=smithReq(lvl+1);
   let inv=p.inventory.find(i=>i.id===req.matId);
   let have=inv?inv.qty:0;
-  if(have<req.matQty || p.gold<req.gold){ logMsg('Te falta material o esquirlas para la mejora.','bad'); return; }
+  if(have<req.matQty || playerFunds() <req.gold){ logMsg('Te falta material o esquirlas para la mejora.','bad'); return; }
   // cobrar
-  p.gold-=req.gold;
+  spendFunds(req.gold);
   inv.qty-=req.matQty; if(inv.qty<=0) p.inventory=p.inventory.filter(i=>i!==inv);
   it.upgrade=lvl+1;
   logMsg('⚒ ¡BÖRK forja tu '+it.name+' a +'+it.upgrade+'! '+(slot==='weapon'?'El filo muerde más hondo.':'La placa aguanta más.'),'good');
@@ -14278,8 +14610,8 @@ UI.forgeRepairAll=function(){
     if(mx>0 && cur<mx){ total+=Math.max(0,Math.ceil((mx-cur)*disc)); items.push(it); }
   }
   if(!items.length){ logMsg('Todo tu equipo está intacto.','flavor'); return; }
-  if(p.gold<total){ logMsg('Necesitas '+total+' esquirlas para repararlo todo (tienes '+p.gold+').','bad'); return; }
-  p.gold-=total;
+  if(playerFunds() <total){ logMsg('Necesitas '+total+' esquirlas para repararlo todo (tienes '+playerFunds()+').','bad'); return; }
+  spendFunds(total);
   for(let it of items){ p.durById[it.id]=durMaxFor(it); }
   logMsg('⚒︎ Reparas todo tu equipo ('+items.length+' piezas, '+total+' esq.). Como nuevo.','good');
   updateUI(); openForge();
@@ -14292,8 +14624,8 @@ UI.forgeRepair=function(slot){
   if(typeof sanHas==='function'&&sanHas('forja1')) disc*=0.8;   // Forja Templada del Santuario
   let cur=getDur(p,it), mx=durMaxFor(it);
   let cost=Math.max(0,Math.ceil((mx-cur)*disc));
-  if(p.gold<cost){ logMsg('No tienes esquirlas suficientes.','bad'); return; }
-  p.gold-=cost;
+  if(playerFunds() <cost){ logMsg('No tienes esquirlas suficientes.','bad'); return; }
+  spendFunds(cost);
   p.durById[it.id]=mx;
   logMsg('⚒︎ '+it.name+' reparado por completo ('+cost+' esq.).','good');
   updateUI(); openForge();
@@ -14330,7 +14662,7 @@ Game.openBaseBuilds=function(cat){
   for(let bd of builds){
     let built=!!(SAN.builds&&SAN.builds[bd.id]);
     // ¿puede pagarlo?
-    let goldOk=p.gold>=(bd.cost.gold||0);
+    let goldOk=playerFunds() >=(bd.cost.gold||0);
     let matsOk=(bd.cost.mats||[]).every(([id,n])=>countItem(id)>=n);
     let supOk=(bd.cost.supplies||[]).every(([id,n])=>countItem(id)>=n);
     let can=!built&&goldOk&&matsOk&&supOk;
@@ -14346,7 +14678,7 @@ Game.openBaseBuilds=function(cat){
       <div class="small c-dim" style="margin-top:2px">${bd.desc}</div>
       ${built?'':'<div class="small" style="margin-top:3px">'+parts.join(' · ')+'</div>'}</div>`;
   }
-  html+=`<div class="small c-dim mt">Esquirlas: <span class="c-gold">${p.gold}</span></div>`;
+  html+=`<div class="small c-dim mt">Esquirlas: ${fundsLabel()}</div>`;
   openModal('⌂ CONSTRUIR LA BASE', html, [{label:'◂ Volver', action:()=>openCraftTable()},{label:'Cerrar',action:'close'}]);
 };
 // ═══ MESA DE ALQUIMIA (Codex Cap. XIV) — combinar elementos, respetando Hoffer ═══
@@ -14421,11 +14753,11 @@ Game.buildBase=function(id){
   let bd=DATA.baseBuilds.find(b=>b.id===id); if(!bd)return;
   if(SAN.builds&&SAN.builds[id])return;
   // verificar coste
-  if(p.gold<(bd.cost.gold||0)){ logMsg('No te alcanzan las esquirlas.','bad'); return; }
+  if(playerFunds() <(bd.cost.gold||0)){ logMsg('No te alcanzan las esquirlas.','bad'); return; }
   if(!(bd.cost.mats||[]).every(([mid,n])=>countItem(mid)>=n)){ logMsg('Te faltan materiales.','bad'); return; }
   if(!(bd.cost.supplies||[]).every(([sid,n])=>countItem(sid)>=n)){ logMsg('Te faltan suministros.','bad'); return; }
   // cobrar
-  p.gold-=(bd.cost.gold||0);
+  spendFunds((bd.cost.gold||0));
   for(let [mid,n] of (bd.cost.mats||[])){ let it=p.inventory.find(x=>x.id===mid); it.qty-=n; if(it.qty<=0)p.inventory=p.inventory.filter(x=>x!==it); }
   for(let [sid,n] of (bd.cost.supplies||[])){ let it=p.inventory.find(x=>x.id===sid); it.qty-=n; if(it.qty<=0)p.inventory=p.inventory.filter(x=>x!==it); }
   SAN.builds=SAN.builds||{}; SAN.builds[id]=true;
@@ -14570,7 +14902,7 @@ function openStudy(f){
     for(let i=0;i<f.scrolls.length;i++){
       let sc=(DATA.scrolls||[]).find(s=>s.id===f.scrolls[i]); if(!sc)continue;
       let price=35+sc.lvl*20;
-      let can=p.gold>=price;
+      let can=playerFunds() >=price;
       html+=`<div class="lrow" style="cursor:${can?'pointer':'default'}" ${can?`onclick="UI.studyBuy(${i})"`:''}>
         <span class="nm">✶ ${sc.name} <span class="c-dim small">(nv ${sc.lvl})</span></span>
         <span class="meta" style="${can?'color:var(--gold)':'color:var(--red)'}">${price} esq.</span>
@@ -14586,8 +14918,8 @@ UI.studyBuy=function(i){
   let f=G._openStudy; if(!f)return;
   let sc=(DATA.scrolls||[]).find(s=>s.id===f.scrolls[i]); if(!sc)return;
   let price=35+sc.lvl*20;
-  if(G.player.gold<price){ logMsg('No te alcanza.','bad'); return; }
-  G.player.gold-=price;
+  if(playerFunds() <price){ logMsg('No te alcanza.','bad'); return; }
+  spendFunds(price);
   f.scrolls.splice(i,1);
   learnFromScroll(sc.id);
   updateUI(); openStudy(f);
@@ -14654,12 +14986,13 @@ const COOK_RECIPES=[
   {out:'tortas_sal',      need:[['madera_hongo',1],['sal_vorn',1]],        name:'Tortas de Sal'}
 ];
 function openCooking(){
-  let html='<div class="small c-dim mb">Las brasas están en su punto. Cocinar convierte lo crudo en algo que de verdad alimenta.</div>';
+  let html='<div class="small c-dim mb">Las brasas están en su punto. Cocinar convierte lo crudo en algo que de verdad alimenta. Se usan ingredientes de tu bolsa y de tu <span class="c-gold">almacén</span> del Santuario.</div>';
+  let countFn = (typeof countItemAnywhere==='function')?countItemAnywhere:countItem;
   for(let i=0;i<COOK_RECIPES.length;i++){
     let r=COOK_RECIPES[i];
     let out=DATA.consumables.find(c=>c.id===r.out);
-    let can=r.need.every(([id,n])=>countItem(id)>=n);
-    let needTxt=r.need.map(([id,n])=>{let dd=DATA.consumables.find(c=>c.id===id);return n+'× '+(dd?dd.name:id)+' ('+countItem(id)+')';}).join(' + ');
+    let can=r.need.every(([id,n])=>countFn(id)>=n);
+    let needTxt=r.need.map(([id,n])=>{let dd=DATA.consumables.find(c=>c.id===id);return n+'× '+(dd?dd.name:id)+' ('+countFn(id)+')';}).join(' + ');
     html+=`<div class="lrow" style="cursor:${can?'pointer':'default'};opacity:${can?1:0.5}" ${can?`onclick="UI.cook(${i})"`:''}>
       <span class="nm">${out?out.glyph:'%'} ${r.name}</span>
       <span class="meta small">${needTxt}</span>
@@ -14669,10 +15002,11 @@ function openCooking(){
 }
 UI.cook=function(i){
   let r=COOK_RECIPES[i]; if(!r)return;
-  if(!r.need.every(([id,n])=>countItem(id)>=n))return;
+  let countFn = (typeof countItemAnywhere==='function')?countItemAnywhere:countItem;
+  if(!r.need.every(([id,n])=>countFn(id)>=n))return;
   for(let [id,n] of r.need){
-    let it=G.player.inventory.find(x=>x.id===id);
-    it.qty-=n; if(it.qty<=0)G.player.inventory=G.player.inventory.filter(x=>x!==it);
+    if(typeof consumeItemAnywhere==='function'){ consumeItemAnywhere(id, n); }
+    else { let it=G.player.inventory.find(x=>x.id===id); if(it){ it.qty-=n; if(it.qty<=0)G.player.inventory=G.player.inventory.filter(x=>x!==it); } }
   }
   addToInventory({kind:'consumable',id:r.out,qty:1});
   logMsg('♨ Cocinas: '+r.name+'. Huele a hogar en el peor lugar del mundo.','good');
@@ -15380,12 +15714,12 @@ Game._npcReclutador=function(root){
   for(let cand of stock){
     if(hired.some(h=>h.uid===cand.uid))continue;
     let rd=DATA.companionRoles.find(r=>r.role===cand.role)||{};
-    let can = hired.length<cap && p.gold>=cand.cost;
+    let can = hired.length<cap && playerFunds() >=cand.cost;
     html+=`<div class="lrow" style="display:block;${can?'cursor:pointer':'opacity:0.55'}" ${can?`onclick="Game.hireCompanion('${cand.uid}')"`:''}>
       <div class="flex-between"><span class="nm" style="color:${getCssVar(rd.color||'--ink-bright')}">${rd.glyph} ${cand.name}</span><span class="meta" style="color:${can?'var(--gold)':'var(--red)'}">${cand.cost} esq.</span></div>
       <div class="small c-dim" style="margin-top:2px">${rd.name} nivel ${cand.level} · ${rd.desc}</div></div>`;
   }
-  html+=`<div class="small c-dim mt">Esquirlas: <span class="c-gold">${p.gold}</span></div>`;
+  html+=`<div class="small c-dim mt">Esquirlas: ${fundsLabel()}</div>`;
   openModal('☗ EL RECLUTADOR', html, [
     {label:'⚔ ¿Cómo pelean tus mercenarios?', action:()=>Game._npcReclutador('mercenarios')},
     {label:'¿Quién eres?', action:()=>Game._npcReclutador('quien')},
@@ -15398,8 +15732,8 @@ Game.hireCompanion=function(uid){
   let cand=recruitStock().find(c=>c.uid===uid); if(!cand)return;
   let cap=2+((typeof sanHas==='function'&&sanHas('vidente1'))?1:0)+((typeof sanBuilt==='function'&&sanBuilt('barracon'))?1:0);
   if((SAN.companions||[]).length>=cap){ logMsg('Tu compañía está completa.','flavor'); return; }
-  if(p.gold<cand.cost){ logMsg('No te alcanza para contratarle.','bad'); return; }
-  p.gold-=cand.cost;
+  if(playerFunds() <cand.cost){ logMsg('No te alcanza para contratarle.','bad'); return; }
+  spendFunds(cand.cost);
   SAN.companions=SAN.companions||[];
   SAN.companions.push({uid:cand.uid, name:cand.name, role:cand.role, level:cand.level});
   saveSanctuary();
@@ -15466,7 +15800,7 @@ Game._npcErudito=function(root){
     // ¿puede aprenderlo? (nivel de Kros + INTELECTO para comprender)
     let lvlOk=(p.krosLevel||1)>=sp.lvl-1;   // tolera 1 nivel por debajo, como el mago erudito
     let intOk=(typeof intCanLearn==='function')?intCanLearn(sp.lvl):true;
-    let can=!known && p.gold>=price && lvlOk && intOk;
+    let can=!known && playerFunds() >=price && lvlOk && intOk;
     html+=`<div class="lrow" style="display:block;${known?'opacity:0.5':''}${can?'cursor:pointer':''}" ${can?`onclick="Game.eruditoBuy('${sp.id}')"`:''}>
       <div class="flex-between"><span class="nm" style="color:${getCssVar(br.color||'--ink-bright')}">${known?'✓ ':''}${sp.name} <span class="c-dim small">nv ${sp.lvl} · ${br.name||sp.branch}</span></span>
       <span class="meta" style="color:${known?'var(--ink-dim)':can?'var(--gold)':'var(--red)'}">${known?'ya lo sabes':!lvlOk?'Kros insuf.':!intOk?'Intelecto insuf.':price+' esq.'}</span></div>
@@ -15474,7 +15808,7 @@ Game._npcErudito=function(root){
     if(!known) avail=true;
   }
   if(!avail) html+='<div class="small c-dim">Ya dominas todo lo que ofrece esta semana. Vuelve tras la próxima luna.</div>';
-  html+=`<div class="small c-dim mt">Esquirlas: <span class="c-gold">${p.gold}</span></div>`;
+  html+=`<div class="small c-dim mt">Esquirlas: ${fundsLabel()}</div>`;
   openModal('E · EL ERUDITO', html, [{label:'❦ ¿Quién eres?', action:()=>Game._npcErudito('lore')},{label:'Marcharse',action:'close'}]);
 };
 Game.eruditoBuy=function(spellId){
@@ -15486,8 +15820,8 @@ Game.eruditoBuy=function(spellId){
   }
   let price=40+sp.lvl*35;
   if(typeof sanBuilt==='function'&&sanBuilt('atril_erudito')) price=Math.round(price*0.75);
-  if(p.gold<price){ logMsg('No te alcanza para ese grimorio.','bad'); return; }
-  p.gold-=price;
+  if(playerFunds() <price){ logMsg('No te alcanza para ese grimorio.','bad'); return; }
+  spendFunds(price);
   p.spells=p.spells||[]; p.spells.push(spellId);
   if(typeof achOnLearnSpell==='function') achOnLearnSpell(spellId);
   logMsg('✶ El Erudito te enseña '+span2(sp.name,'--cyan')+'. El patrón queda grabado en tu Núcleo.','magic');
@@ -15920,8 +16254,8 @@ Game.rescueFromEco=function(ei,ii){
   let eco=SAN.ecos[ei]; if(!eco||eco.rescued)return;
   let it=eco.items[ii]; if(!it)return;
   let p=G.player;
-  if(p.gold<30){ logMsg('El rito de rescate cuesta 30 esquirlas.','bad'); return; }
-  p.gold-=30;
+  if(playerFunds() <30){ logMsg('El rito de rescate cuesta 30 esquirlas.','bad'); return; }
+  spendFunds(30);
   storageStack(it.kind,it.id,1);
   eco.rescued=true;   // 1 objeto por Eco caído
   saveSanctuary();
@@ -16016,7 +16350,7 @@ Game.openRelicPicker=function(){
       <span class="nm">${marked?'☨ ':''}${def?def.name:it.id}</span>
       <span class="meta">${marked?'reliquia':'marcar (15)'}</span></div>`;
   }
-  html+='<div class="small c-dim mt">Esquirlas: <span class="c-gold">'+p.gold+'</span> · Marcadas: '+p._relics.length+'/3</div>';
+  html+='<div class="small c-dim mt">Esquirlas: '+fundsLabel()+' · Marcadas: '+p._relics.length+'/3</div>';
   openModal('☨ RELIQUIAS', html, [{label:'Volver', action:()=>Game.openIncursionSelect()},{label:'Cerrar',action:'close'}]);
 };
 Game.toggleRelic=function(kind,id){
@@ -16026,8 +16360,8 @@ Game.toggleRelic=function(kind,id){
   else {
     if(p._relics.length>=3){ logMsg('Solo puedes asegurar 3 reliquias.','bad'); return; }
     let free = p._relics.length===0 && typeof sanHas==='function' && sanHas('kv3');   // Pacto del Ciclo
-    if(!free && p.gold<15){ logMsg('Necesitas 15 esquirlas para el rito.','bad'); return; }
-    if(!free) p.gold-=15;
+    if(!free && playerFunds() <15){ logMsg('Necesitas 15 esquirlas para el rito.','bad'); return; }
+    if(!free) spendFunds(15);
     p._relics.push({kind,id});
     if(free) logMsg('∞ El Pacto del Ciclo sella tu primera reliquia sin coste.','magic');
     logMsg('☨ Marcada como reliquia: si caes, volverá al Almacén.','magic');
@@ -16282,7 +16616,7 @@ function openMerchant(f){
 function renderMerchant(f){
   let p=G.player;
   let html='';
-  html+=`<div class="flex-between mb"><span class="c-gold">☺︎ Comerciante Errante</span><span class="c-gold">Esquirlas: ${p.gold}</span></div>`;
+  html+=`<div class="flex-between mb"><span class="c-gold">☺︎ Comerciante Errante</span><span class="c-gold" title="Esquirlas en tu bolsa + las guardadas en el Santuario">Esquirlas: ${playerFunds()}${(typeof SAN!=='undefined'&&SAN&&SAN.shards)?' <span class="small c-dim">('+p.gold+' bolsa + '+SAN.shards+' Santuario)</span>':''}</span></div>`;
   if(f._quip) html+=`<div class="small" style="font-style:italic;color:var(--ink-dim);border-left:2px solid var(--line-bright);padding-left:8px;margin-bottom:10px;line-height:1.5">${f._quip}</div>`;
   // pestañas
   html+=`<div class="flex mb" style="gap:6px">
@@ -16300,7 +16634,7 @@ function renderMerchant(f){
         if(!def)continue;
         let _disc=merchantDayDiscount();
         let _px=Math.max(1,Math.round(entry.price*_disc));
-        let afford=p.gold>=_px;
+        let afford=playerFunds()>=_px;
         let extra = entry.kind==='scroll'?' <span class="c-dim">(hechizo)</span>':'';
         let priceTxt=_disc<1?`<s class="c-dim small">${entry.price}</s> ${_px}`:`${_px}`;
         html+=`<div class="lrow" style="cursor:${afford?'pointer':'default'}" ${afford?`onclick="UI.merchantBuy(${i})"`:''}>
@@ -16372,8 +16706,8 @@ UI.merchantBuy=function(idx){
   let entry=f.stock[idx]; if(!entry)return;
   let p=G.player;
   let _pay=Math.max(1,Math.round(entry.price*merchantDayDiscount()));
-  if(p.gold<_pay){ logMsg('No tienes suficientes esquirlas.','bad'); return; }
-  p.gold-=_pay;
+  if(playerFunds()<_pay){ logMsg('No tienes suficientes esquirlas (bolsa + Santuario).','bad'); return; }
+  spendFunds(_pay);
   if(entry.kind==='scroll'){
     // aprender el hechizo directamente
     learnFromScroll(entry.id);
@@ -16421,6 +16755,8 @@ function distanceBarHTML(c){
   let pcb=c.combatants.find(x=>x.isPlayer);
   if(!pcb)return '';
   if(pcb.pos===undefined)pcb.pos=2;
+  // helper: posición 0..10 → % con el mismo margen que las fichas (4%..96%)
+  const _mapPct = (v)=> 4 + (Math.max(0,Math.min(10,v))/10)*92;
   // bandas de alcance (a ambos lados del jugador, por honestidad)
   let bands='';
   if(c.pendingRange){
@@ -16429,7 +16765,8 @@ function distanceBarHTML(c){
       let a=pcb.pos+sgn*mn, b=pcb.pos+sgn*mx;
       let lo=Math.max(0,Math.min(a,b)), hi=Math.min(10,Math.max(a,b));
       if(hi>=lo && hi>=0 && lo<=10){
-        bands+=`<div class="dr" style="left:${lo*10}%;width:${Math.max(2,(hi-lo)*10)}%"></div>`;
+        let l=_mapPct(lo), r=_mapPct(hi);
+        bands+=`<div class="dr" style="left:${l}%;width:${Math.max(2,r-l)}%"></div>`;
       }
     }
   }
@@ -16450,14 +16787,15 @@ function distanceBarHTML(c){
         let lo=Math.max(0,Math.min(a,b)), hi=Math.min(10,Math.max(a,b));
         if(hi>=lo){
           let col = ai.kind==='magic'?'--violet' : ai.kind==='ranged'?'--cyan' : '--red';
-          threat+=`<div class="dr-threat" style="left:${lo*10}%;width:${Math.max(2,(hi-lo)*10)}%;--tc:${getCssVar(col)}"></div>`;
+          let l=_mapPct(lo), r=_mapPct(hi);
+          threat+=`<div class="dr-threat" style="left:${l}%;width:${Math.max(2,r-l)}%;--tc:${getCssVar(col)}"></div>`;
         }
       }
     }
   }
   // marcas 0..10
   let ticks='';
-  for(let i=0;i<=10;i++) ticks+=`<div class="dt" style="left:${i*10}%"></div>`;
+  for(let i=0;i<=10;i++) ticks+=`<div class="dt" style="left:${_mapPct(i)}%"></div>`;
   // fichas de los combatientes.
   // Si varios comparten la MISMA posición, se apilan verticalmente en vez de
   // dibujarse uno encima de otro (antes todos quedaban en la misma línea y
@@ -16479,20 +16817,30 @@ function distanceBarHTML(c){
       let topOff = 2 + j*15;   // cada ficha en su fila dentro de la misma columna
       let ttl = cb.name+' · posición '+cb.pos;
       if(cb.isEnemy && typeof enemyAttackInfo==='function'){ let ai=enemyAttackInfo(cb.ref); ttl+=' · '+ai.label+' (alcance '+ai.range[0]+'–'+ai.range[1]+')'; }
-      icons+=`<span class="di ${cls}" style="left:${cb.pos*10}%;top:${topOff}px" title="${ttl}">${cb.isPlayer?'@':cb.glyph}</span>`;
+      // POSICIÓN HORIZONTAL con margen: las fichas se centran con translateX(-50%),
+      // así que en los extremos (pos 0 y 10) la mitad del glifo se salía del borde
+      // (overflow:hidden) y se veía CORTADO. Mapeamos 0..10 al rango 4%..96% para
+      // que ninguna ficha toque el borde y siempre se vea completa.
+      let _leftPct = 4 + (cb.pos/10)*92;
+      icons+=`<span class="di ${cls}" style="left:${_leftPct}%;top:${topOff}px" title="${ttl}">${cb.isPlayer?'@':cb.glyph}</span>`;
     }
   }
-  let _maxM = (typeof axisMeters==='function')?axisMeters(10):15;
-  let _midM = (typeof axisMeters==='function')?axisMeters(5):7.5;
+  // (los botones de MOVER ya NO van en el eje: en el boceto nuevo son una fila
+  //  propia justo encima de la barra de acciones, ver renderCombatActions.)
+  // La línea "pos N · alcance X-Y" bajo la barra se quitó a pedido del usuario:
+  // ocupaba una fila entera y restaba espacio a la lista de combatientes. La
+  // posición ya se ve en la ficha del jugador y en la barra misma.
   return `<div class="dist-wrap">
     <div class="dist-track">${threat}${bands}${ticks}${icons}</div>
-    <div class="dist-lbl"><span>▓ 0 m</span><span class="c-dim">${_midM} m</span><span>${_maxM} m</span></div>
   </div>`;
 }
 
 function renderCombat(){
   if(!G.combat){ return; }
   let c=G.combat;
+  // marcar el estado de combate a nivel de layout (PC y móvil). Esto permite que el
+  // CSS oculte la crónica/paneles duplicados de la columna derecha en PC.
+  { let _app=document.getElementById('app'); if(_app) _app.classList.add('is-combat'); }
   const vp=document.getElementById('viewport');
   // móvil: el combate usa tamaño fijo, no el zoom del mapa
   if(typeof isMobileLayout==='function' && isMobileLayout()){
@@ -16527,13 +16875,13 @@ function renderCombat(){
     lines.push(renderCombatantBlock(ac, false, actor));
   }
 
-  // ═══ ESTRUCTURA EN 3 ZONAS ═══
-  // Antes todo se apilaba en una sola columna y el bloque del JUGADOR quedaba
-  // al final: con varios enemigos y aliados se salía de la pantalla y no había
-  // forma de ver tu propia vida. Ahora:
-  //   1) eje táctico  — fijo arriba
-  //   2) combatientes — zona con scroll propio (crece sin empujar nada)
-  //   3) TÚ           — fijo abajo, SIEMPRE visible
+  // ═══ ESTRUCTURA SEGÚN EL BOCETO DEL USUARIO (al pie de la letra) ═══
+  // Paneles apilados, cada uno con su ENCABEZADO en mayúsculas tenues:
+  //   [EJE TÁCTICO · DISTANCIA]  — barra de posiciones con atrás/adelante
+  //   [COMBATIENTES]             — lista de enemigos/aliados con scroll
+  //   [@ NOMBRE · postura]       — tu bloque con barras (VIDA/ALIENTO/KROS/CALOR)
+  //   [CRÓNICA DE COMBATE]       — panel con scroll propio, SIEMPRE visible
+  // Los botones de acción van aparte, en #cmdbar (grilla estable).
   let pc=c.combatants.find(x=>x.isPlayer);
   vp.classList.add('combat-mode');
   // el minimapa estorba en combate: fuera (y libera altura en móvil)
@@ -16543,17 +16891,75 @@ function renderCombat(){
   // explorar, renderMapNow reconstruya la grilla en vez de hacer diff sobre celdas
   // que ya no existen (era la causa de que la pantalla se quedara en el combate).
   vp._cells=null; vp._cellCache=null; vp._gridMap=null;
+  // ¿móvil? entonces la crónica se APILA dentro del área de combate (todo junto).
+  // En PC la crónica NO va aquí — vive en la columna derecha (#log-panel), como el
+  // boceto de combate PC (izquierda: eje/combatientes/tú · derecha: crónica). Así
+  // no aparece DUPLICADA.
+  let _mobil = (typeof isMobileLayout==='function' && isMobileLayout());
   vp.innerHTML =
-    '<div class="cb-axis">'+distanceBarHTML(c)+'</div>'+
-    '<div class="cb-list">'+
-      lines.map(l=>'<span class="vp-row" style="height:auto;line-height:1.35">'+l+'</span>').join('')+
+    '<div class="cb-sec cb-axis-sec">'+
+      '<div class="cb-sechead">EJE TÁCTICO · DISTANCIA</div>'+
+      '<div class="cb-axis">'+distanceBarHTML(c)+'</div>'+
     '</div>'+
-    '<div class="cb-self">'+
-      renderPlayerBlock(pc, actor)+
-    '</div>';
+    '<div class="cb-sec cb-list-sec">'+
+      '<div class="cb-sechead">COMBATIENTES</div>'+
+      '<div class="cb-list">'+
+        lines.map(l=>'<span class="vp-row" style="height:auto;line-height:1.35">'+l+'</span>').join('')+
+      '</div>'+
+    '</div>'+
+    '<div class="cb-sec cb-self-sec">'+
+      '<div class="cb-self">'+renderPlayerBlock(pc, actor)+'</div>'+
+    '</div>'+
+    (function(){ let _leg=combatStatusLegendHTML();
+      return _leg ? '<div class="cb-sec cb-legend-sec" id="cb-legend-sec">'+
+        '<div class="cb-sechead">ESTADOS ACTIVOS</div>'+
+        '<div class="cb-legend">'+_leg+'</div>'+
+      '</div>' : ''; })()+
+    ( _mobil ?
+      '<div class="cb-sec cb-chronicle" id="cb-chronicle">'+
+        '<div class="cb-sechead">CRÓNICA DE COMBATE</div>'+
+        '<div class="cbc-lines" id="cbc-lines">'+combatChronicleHTML()+'</div>'+
+      '</div>'
+      : '' );
+  // En PC, pintar la crónica de combate en el panel de la derecha (#log reutilizado)
+  if(!_mobil){
+    let _log=document.getElementById('log');
+    if(_log){ _log.innerHTML=combatChronicleHTML(); _log.scrollTop=_log.scrollHeight; }
+    // etiqueta del panel derecho en combate
+    let _lp=document.getElementById('log-panel');
+    if(_lp){ let _h=_lp.querySelector('.panel-h span'); if(_h) _h.textContent='CRÓNICA DE COMBATE'; }
+  }
+  // desplazar la crónica a lo más reciente (móvil)
+  { let _cl=document.getElementById('cbc-lines'); if(_cl) _cl.scrollTop=_cl.scrollHeight; }
   // reposicionar la capa de FX sobre el viewport
   if(typeof positionFXLayer==='function') positionFXLayer();
 }
+// HTML de la crónica de combate: las últimas líneas del registro. Vive en su propia
+// zona con scroll dentro del viewport de combate (no en la barra de botones).
+function combatChronicleHTML(){
+  let lines = (typeof getRecentLog==='function') ? getRecentLog(10) : [];
+  if(!lines.length) return '<div class="cbc-empty c-dim small">El combate comienza…</div>';
+  return lines.map(l=>'<div class="cbc-line msg '+(l.cls||'')+'">'+l.text+'</div>').join('');
+}
+// refresca solo la crónica (sin reconstruir todo el combate) cuando llega una línea
+function refreshCombatChronicle(){
+  // de paso, refrescar la leyenda de estados activos (pueden haber cambiado)
+  { let _leg=document.getElementById('cb-legend-sec');
+    if(_leg && typeof combatStatusLegendHTML==='function'){
+      let body=combatStatusLegendHTML();
+      if(body){ let _b=_leg.querySelector('.cb-legend'); if(_b) _b.innerHTML=body; }
+      else { _leg.style.display='none'; }
+    } }
+  // móvil: la crónica está en el viewport (#cbc-lines); PC: en la columna derecha (#log)
+  let host=document.getElementById('cbc-lines');
+  if(host){ host.innerHTML=combatChronicleHTML(); host.scrollTop=host.scrollHeight; return; }
+  let _mobil = (typeof isMobileLayout==='function' && isMobileLayout());
+  if(!_mobil){
+    let _log=document.getElementById('log');
+    if(_log){ _log.innerHTML=combatChronicleHTML(); _log.scrollTop=_log.scrollHeight; }
+  }
+}
+window.refreshCombatChronicle=refreshCombatChronicle;
 
 // bloque de un combatiente (enemigo o aliado IA)
 function renderCombatantBlock(cm, isEnemy, actor){
@@ -16621,15 +17027,42 @@ function renderPlayerBlock(pc, actor){
   let marker = isTurn ? span2('▸ ','--amber-glow') : '';
   let _pid = G.combat?G.combat.combatants.indexOf(pc):-1;
   let nameLine = marker+`<span class="cb-glyph" id="cbg-${_pid}" style="color:${col}${isTurn?';text-shadow:0 0 6px '+col:''};display:inline-block;transition:transform .12s,color .12s">@ ${p.name}</span>`;
+  // postura actual a la derecha del nombre (como en el boceto: "@ KAELEN … Vanguardia")
+  { let _st=DATA.stances&&DATA.stances[p.stance||'neutral'];
+    if(_st) nameLine+=' <span class="cb-self-stance small c-dim">'+(_st.icon||'')+' '+_st.name+'</span>'; }
   let st=statusIconsBig(p);
   if(st)nameLine+=' '+st;
 
-  // barra de vida animada
+  // ── barritas compactas estilo boceto: etiqueta · barra · valor ──
+  function miniBar(lbl, pct, colVar, val){
+    pct=Math.max(0,Math.min(1,pct));
+    return '<span class="cb-mb">'+
+      '<span class="cb-mb-lbl">'+lbl+'</span>'+
+      '<span class="cb-mb-bar"><i style="width:'+Math.round(pct*100)+'%;background:'+getCssVar(colVar)+'"></i></span>'+
+      '<span class="cb-mb-val">'+val+'</span>'+
+    '</span>';
+  }
+  // HP (siempre) y Kr (magos) en la fila 1; Al (siempre) y Ca (magos) en la fila 2
   let hpPct=p.hp/p.hpMax;
   let hpCol=hpPct>0.5?'--green':hpPct>0.25?'--amber':'--red';
-  let bar=hpBarHTML(hpPct, hpCol, Math.ceil(p.hp)+'/'+p.hpMax, '--ink-bright');
+  let cells=[];
+  cells.push(miniBar('HP', hpPct, hpCol, Math.ceil(p.hp)+'/'+p.hpMax));
+  if(classUsesMagic()){
+    let kPct=p.kros/p.krosMax;
+    cells.push(miniBar('Kr', kPct, '--cyan', Math.floor(p.kros)+'/'+p.krosMax));
+  }
+  if((p.staminaMax||0)>0){
+    let sPct=(p.stamina||0)/(p.staminaMax||1);
+    cells.push(miniBar('Al', sPct, '--green', (p.stamina||0)+'/'+(p.staminaMax||0)));
+  }
+  if(classUsesMagic() && p.us){
+    let hPct=Math.min(1,(p.heat||0)/p.us);
+    let hCol=hPct>=1?'--red-bright':hPct>0.8?'--red':hPct>0.25?'--amber':'--ink-dim';
+    cells.push(miniBar('Ca', hPct, hCol, Math.round(hPct*100)+'%'));
+  }
+  let statGrid='<div class="cb-self-grid">'+cells.join('')+'</div>';
 
-  // barra ATB del jugador
+  // barra ATB del jugador (fila propia, debajo de las estadísticas)
   let atbPct=Math.min(1,(pc&&pc.atb||0)/100);
   let aw=12, af=Math.round(atbPct*aw);
   let atbCol=atbPct>=1?'--amber-glow':'--ink-dim';
@@ -16637,32 +17070,10 @@ function renderPlayerBlock(pc, actor){
              '<span class="small" style="color:'+getCssVar('--line')+'">'+'▯'.repeat(aw-af)+'</span>'+
              (atbPct>=1?' <span class="small c-amber">¡LISTO!</span>':'');
 
-  // ── recursos secundarios: cada uno como "chip" con barra propia ──
-  // Se colocan en un contenedor FLEX con wrap: así nunca se solapan, se apilan
-  // solos cuando no caben (el bug era concatenarlos inline y que desbordaran).
-  let chips=[];
-  if(classUsesMagic()){
-    let kPct=p.kros/p.krosMax;
-    chips.push('<span class="cb-res"><span class="cb-resbar"><i style="width:'+Math.round(Math.max(0,Math.min(1,kPct))*100)+'%;background:'+getCssVar('--cyan')+'"></i></span><span class="small" style="color:'+getCssVar('--cyan')+'">Kros '+Math.floor(p.kros)+'/'+p.krosMax+'</span></span>');
-    if(p.us){ let hPct=Math.min(1,(p.heat||0)/p.us);
-      if(hPct>0.25){
-        let hCol=hPct>=1?'--red-bright':hPct>0.8?'--red':'--amber';
-        chips.push('<span class="cb-res"><span class="cb-resbar"><i style="width:'+Math.round(hPct*100)+'%;background:'+getCssVar(hCol)+'"></i></span><span class="small" style="color:'+getCssVar(hCol)+'" title="Calor de canalización">♨ '+Math.round(hPct*100)+'%</span></span>');
-      } }
-  }
-  // El Aliento se muestra SIEMPRE: en clase libre, todo personaje tiene
-  // habilidades de Aliento (al menos las innatas), así que siempre es relevante.
-  if((p.staminaMax||0)>0){
-    let sPct=(p.stamina||0)/(p.staminaMax||1);
-    chips.push('<span class="cb-res"><span class="cb-resbar"><i style="width:'+Math.round(Math.max(0,Math.min(1,sPct))*100)+'%;background:'+getCssVar('--green')+'"></i></span><span class="small" style="color:'+getCssVar('--green')+'">Aliento '+(p.stamina||0)+'/'+(p.staminaMax||0)+'</span></span>');
-  }
-  let resBlock = chips.length ? '<div class="cb-res-row">'+chips.join('')+'</div>' : '';
-
-  // Estructura en filas claras: nombre · [vida | ATB] · recursos
   return '<div class="cb-self-inner">'+
     '<div class="cb-self-name">'+nameLine+'</div>'+
-    '<div class="cb-self-vital">'+bar+'<span class="cb-atb">'+atbBar+'</span></div>'+
-    resBlock+
+    statGrid+
+    '<div class="cb-self-atb">'+atbBar+'</div>'+
     '</div>';
 }
 
@@ -16691,6 +17102,31 @@ function statusIconsBig(ent){
   }
   return out.length? '<span class="st-row">'+out.join('')+'</span>' : '';
 }
+// LEYENDA DE ESTADOS: recopila todos los efectos activos en el combate (en cualquier
+// combatiente) y los explica —icono · nombre · qué hace— para que el jugador no tenga
+// que adivinar qué significa cada símbolo (en móvil no hay tooltip; en PC ayuda igual).
+function combatStatusLegendHTML(){
+  if(!G.combat) return '';
+  let seen={};
+  for(let cb of G.combat.combatants){
+    if(!cb.statuses) continue;
+    for(let k in cb.statuses){ if(DATA.statusEffects[k]) seen[k]=true; }
+  }
+  let keys=Object.keys(seen);
+  if(!keys.length) return '';
+  let rows = keys.map(k=>{
+    let def=DATA.statusEffects[k];
+    let col=getCssVar(def.color);
+    let bad=!def.good;
+    return '<div class="cb-leg-row">'+
+      '<span class="cb-leg-ic '+(bad?'st-bad':'st-good')+'" style="color:'+col+';border-color:'+col+'">'+(def.glyph||def.icon||'•')+'</span>'+
+      '<span class="cb-leg-nm" style="color:'+col+'">'+def.name+'</span>'+
+      '<span class="cb-leg-ds">'+def.desc+'</span>'+
+    '</div>';
+  }).join('');
+  return rows;
+}
+window.combatStatusLegendHTML=combatStatusLegendHTML;
 
 // ---- capa de efectos sobre el viewport de combate ----
 let _fxLayer=null;
@@ -18626,11 +19062,13 @@ function renderCombatActions(){
 
   // MENÚ PRINCIPAL
   let html='';
+  // FILA DE MOVIMIENTO (boceto nuevo): "◂ Retroceder" y "▸ Avanzar" en su propia
+  // fila, justo encima de la grilla de acciones. Marcados con clase move-cmd.
   {
     let pcb=c.combatants.find(x=>x.isPlayer);
     let pos=pcb&&pcb.pos!==undefined?pcb.pos:2;
-    html+=`<span class="cmd ${pos<=0?'disabled':''}" ${pos>0?'onclick="playerCombatMove(-1)"':''} title="Retroceder 1 casilla (gasta el turno). En 0 está el MURO.">◂ Retroceder</span>`;
-    html+=`<span class="cmd ${pos>=10?'disabled':''}" ${pos<10?'onclick="playerCombatMove(1)"':''} title="Avanzar 1 casilla hacia el enemigo (gasta el turno)">Avanzar ▸</span>`;
+    html+=`<span class="cmd move-cmd ${pos<=0?'disabled':''}" ${pos>0?'onclick="playerCombatMove(-1)"':''} title="Retroceder 1 casilla (gasta el turno). En 0 está el MURO.">◂ Retroceder</span>`;
+    html+=`<span class="cmd move-cmd ${pos>=10?'disabled':''}" ${pos<10?'onclick="playerCombatMove(1)"':''} title="Avanzar 1 casilla hacia el enemigo (gasta el turno)">Avanzar ▸</span>`;
   }
   {
     let wdA=G.player.weaponDmg();
@@ -18699,9 +19137,10 @@ function renderCombatActions(){
   }
   html+=`<span class="cmd danger" onclick="UI.cFlee()">H<span class="key">u</span>ir</span>`;
   // CAPA DE ATB: si la barra aún se llena, mostramos los botones pero inertes
-  // (sin reaccionar al toque) y con un aviso arriba. Así no parpadean cada turno.
+  // (sin reaccionar al toque) y un aviso discreto arriba. La CRÓNICA ya no vive
+  // aquí — es una zona fija propia dentro del viewport (no empuja los botones).
   bar.innerHTML = _atbLocked
-    ? '<div class="atb-charging-note c-dim small blink" style="width:100%;text-align:center;margin-bottom:4px">⏳ Tu barra ATB se llena…</div>'+html
+    ? '<div class="atb-charging-note c-dim small blink" style="width:100%;text-align:center;margin-bottom:2px">⏳ Tu barra ATB se llena…</div>'+html
     : html;
   // el toque queda inerte mientras carga, pero los botones siguen VISIBLES
   if(_atbLocked){ bar.classList.add('atb-locked'); }
@@ -18835,7 +19274,9 @@ function renderSkillSubmenu(){
       let inRange=true, rangeNote='';
       if(s.target==='enemy'){
         inRange=enS.some(ec=>{let dd=Math.abs((ec.pos||0)-((pcbS&&pcbS.pos)||2));return dd>=rn&&dd<=rx;});
-        rangeNote=` <span class="small ${inRange?'c-dim':'c-red'}">[${rn}–${rx}]</span>`;
+        // alcance SIEMPRE visible (verde si el enemigo está a tiro, rojo si no)
+        let _rlbl = rn>0 ? ('alc. '+rn+'–'+rx) : ('alc. '+rx);
+        rangeNote=` <span class="small ${inRange?'c-green':'c-red'}" title="Alcance en el eje (tú=0). El daño baja con la distancia.">◈${_rlbl}</span>`;
         if(!inRange)can=false;
       }
       html+=`<span class="cmd ${can?'':'disabled'}" ${can?`onclick="UI.pickSkill('${sid}')"`:''} title="${inRange?s.desc:'FUERA DE ALCANCE — acércate o retrocede'}">
@@ -18864,7 +19305,8 @@ function renderSkillSubmenu(){
       if(!reqOk){ can=false; reqNote=' <span class="small c-red">[requiere '+reqWeaponLabel(sk.reqWeapon)+']</span>'; }
       if(sk.type==='attack'){
         inRange=enK.some(ec=>{let dd=Math.abs((ec.pos||0)-((pcbK&&pcbK.pos)||2));return dd>=rn&&dd<=rx;});
-        rangeNote=` <span class="small ${inRange?'c-dim':'c-red'}">[${rn}–${rx}]</span>`;
+        let _rlbl = rn>0 ? ('alc. '+rn+'–'+rx) : ('alc. '+rx);
+        rangeNote=` <span class="small ${inRange?'c-green':'c-red'}" title="Alcance en el eje (tú=0).">◈${_rlbl}</span>`;
         if(!inRange)can=false;
       }
       html+=`<span class="cmd ${can?'':'disabled'}" ${can?`onclick="UI.pickSkill('${kid}')"`:''} title="${!reqOk?('Esta técnica exige '+reqWeaponLabel(sk.reqWeapon)+' en mano.'):(inRange?sk.desc:'FUERA DE ALCANCE — muévete primero')}">
@@ -19091,9 +19533,14 @@ function renderMobileVitals(){
     let pct = need>0 ? Math.max(0,Math.min(100, cur/need*100)) : 0;
     h += '<div class="mvb mvb-xp" title="Experiencia — sube de nivel para ganar puntos"><i style="width:'+pct+'%;background:var(--amber-glow)"></i><b><span>Nv'+(p.level||1)+'</span><span>'+cur+'/'+need+'</span></b></div>';
   }
-  // ESQUIRLAS: en móvil el panel del Eco está oculto, así que el dinero
-  // no se veía por ningún lado. Va aquí, siempre a la vista.
-  h += '<div class="mvb mvb-coin" title="Esquirlas"><b><span>₱</span><span>'+(p.gold||0)+'</span></b></div>';
+  // ESQUIRLAS y POSTURA: en móvil el panel del Eco está oculto, así que van aquí,
+  // siempre a la vista. Como en el boceto, son dos celdas ANCHAS (ocupan 2 columnas)
+  // al final de la franja de vitales.
+  h += '<div class="mvb mvb-coin coin" title="Esquirlas">₱ '+(p.gold||0)+' esquirlas</div>';
+  { let _st=DATA.stances&&DATA.stances[p.stance||'neutral'];
+    let _stName=_st?_st.name:'Neutral';
+    h += '<div class="mvb coin mvb-stance" title="Postura de combate actual">'+(_st&&_st.icon?_st.icon+' ':'')+'Postura '+_stName+'</div>';
+  }
   el.innerHTML=h;
 }
 window.renderMobileVitals=renderMobileVitals;
@@ -19173,9 +19620,12 @@ function updateUI(){
       } else oi.textContent='';
     }
   }
+  // El piso que se muestra al jugador es el LOCAL de la zona (1–5), no el depth
+  // absoluto. Cada zona empieza en su piso 1 aunque su base absoluta sea 2, 4, 8…
+  let _floor = (typeof localDepth==='function')?localDepth():G.depth;
   document.getElementById('loc-name').textContent = _mob
-    ? (G.isHub?'Santuario':(G.incursion?'P'+G.depth:'P'+G.depth))
-    : (G.isHub?'El Santuario':(G.incursion?(G.incursion.name+' · prof. '+G.depth):'Cueva · Nivel '+G.depth));
+    ? (G.isHub?'Santuario':'P'+_floor)
+    : (G.isHub?'El Santuario':(G.incursion?(G.incursion.name+' · piso '+_floor):'Cueva · Piso '+_floor));
   // fecha y luna del Calendario de Kaelis en la cabecera (solo PC: en móvil
   // la fecha ya vive compacta en la cabecera del mapa y aquí desbordaba)
   { let el=document.getElementById('cal-label');
@@ -19855,6 +20305,18 @@ function initTitle(){
     <div class="mitem" onclick="Game.openAchievements()"><span class="k">✧</span> LOGROS</div>
     <div class="mitem" onclick="Game.openCalendar()"><span class="k">☾︎</span> CALENDARIO DE KAELIS</div>
   `;
+  // RED DE SEGURIDAD: el logo, subtítulo, tagline y menú se revelan con una animación
+  // CSS (fadein). Si por cualquier motivo la animación no aplica (reduce-motion,
+  // ahorro de batería, Brave, etc.), forzamos la visibilidad tras un instante para
+  // que NUNCA se queden invisibles. Un fallo aquí dejaría la pantalla de inicio en
+  // blanco, así que garantizamos que el menú siempre aparezca.
+  try{
+    let reveal=()=>{ ['#logo','.subtitle','.tagline','#titlemenu'].forEach(sel=>{
+      let el=document.querySelector('#titlescreen '+sel) || document.querySelector(sel);
+      if(el){ el.style.opacity='1'; }
+    }); };
+    setTimeout(reveal, 2600);   // después de que la animación normal debería haber terminado
+  }catch(e){}
   try{ startStarfield(); }catch(e){}
 }
 
@@ -20050,7 +20512,7 @@ function ccClass(){
 // ===== PASO: SUBCLASE =====
 function ccSubclass(){
   if(!CC.cls || !DATA.classes[CC.cls]){
-    return '<div class="c-dim small center mt">Primero elige una clase en el paso anterior.</div>';
+    return '<div class="c-dim small center mt">Primero define tu Eco en el paso anterior.</div>';
   }
   let subs=Object.values(DATA.subclasses).filter(s=>s.base===CC.cls);
   let html='<div class="small c-dim mb center">Elige tu especialidad dentro de '+DATA.classes[CC.cls].name+'.</div>';
@@ -20218,9 +20680,12 @@ function ccSpellPick(){
   html+='<div class="cc-grid" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr))">';
   for(let s of pool){
     let on=CC.spellPick.includes(s.id);
-    let tag=/_of/.test(s.id)?'OFENSIVO':/_df/.test(s.id)?'DEFENSIVO':/_ar/.test(s.id)?'ARMA':'ESBIRRO';
-    html+=`<div class="cc-card ${on?'selected':''}" onclick="Game.ccToggleSpell('${s.id}')" title="${s.seq} ※ ${s.concept}">
-      <div><span style="color:${getCssVar(s.color)}">${s.icon}</span> <b>${s.name}</b> <span class="small c-dim">${s.kros}K · ${tag}</span></div>
+    // hechizo de IDENTIDAD de la rama = el que tiene nombre propio (no generado g_)
+    let esIdentidad = !/^g_/.test(s.id);
+    let tag=esIdentidad?'★ IDENTIDAD':/_of/.test(s.id)?'OFENSIVO':/_df/.test(s.id)?'DEFENSIVO':/_ar/.test(s.id)?'ARMA':'ESBIRRO';
+    let tagCol=esIdentidad?'--amber-glow':'--ink-dim';
+    html+=`<div class="cc-card ${on?'selected':''}" onclick="Game.ccToggleSpell('${s.id}')" title="${s.seq} ※ ${s.concept}" style="${esIdentidad?'border-color:var(--amber)':''}">
+      <div><span style="color:${getCssVar(s.color)}">${s.icon}</span> <b>${s.name}</b> <span class="small" style="color:var(${tagCol})">${s.kros}K · ${tag}</span></div>
       <div class="small c-dim">${s.desc}</div>
     </div>`;
   }
@@ -20336,7 +20801,7 @@ function ccShop(){
   let spent=cartTotal();
   let remaining=CC.shopBudget-spent;
   let cl=CC.cls;
-  let html=`<div class="small c-dim mb center">Compra tu equipamiento inicial (opcional). Si no eliges arma, partirás con la básica de tu clase.</div>`;
+  let html=`<div class="small c-dim mb center">Compra tu equipamiento inicial (opcional). Si no eliges arma, partirás con el arma básica.</div>`;
   // PESO DEL CARRITO: que nadie salga sobrecargado sin saberlo
   let cartW=0;
   for(let cid of CC.cart){
@@ -20347,19 +20812,24 @@ function ccShop(){
     +((typeof sanHas==='function'&&sanHas('almacen1'))?8:0)+((typeof sanHas==='function'&&sanHas('almacen2'))?8:0);
   html+=`<div class="center mb"><span class="c-gold">Esquirlas: ${remaining} / ${CC.shopBudget}</span>
     · <span style="color:${cartW>estCap?'var(--red-bright)':'var(--ink-dim)'}" title="Peso del equipo elegido frente a tu capacidad estimada de carga">Peso: ${cartW.toFixed(1)} / ~${estCap} pk${cartW>estCap?' ⚠ SOBRECARGA':''}</span></div>`;
-  // builds de una pulsación según tu clase
+  // BUILDS SUGERIDAS: el Eco no tiene clase, así que se le ofrecen las TRES
+  // orientaciones clásicas (guerrero / arquero / arcano) como punto de partida.
+  // Puede tomar una tal cual o armar la suya libremente. Cada una viste al Eco
+  // de pies a cabeza para ese estilo: arma + apoyo + armadura + botas + consumibles.
   const BUILDS={
-    melee:[['⛊ Muralla','espada_corta,cota_ferralis,yelmo_guerra,pocion_curacion'],
-           ['⚔ Duelista','estoque,cuero_endurecido,botas_cuero,pocion_curacion']],
-    ranged:[['➳ Cazador','arco_largo,cuero_endurecido,botas_cuero,antidoto'],
-            ['◎ Tirador','ballesta,sombrero_ala,guantes_opn,pocion_curacion']],
-    magic:[['✑ Erudito','tunica_paralgodon,sombrero_ala,pocion_kros,te_theta'],
-           ['◗︎ Umbrío','manto_umbra,sandalias_corcho,pocion_kros,pocion_curacion']],
-    wander:[['☰ Errante','estoque,cuero_endurecido,pocion_curacion,antidoto'],
-            ['◈ Aventurero','espada_corta,tunica_paralgodon,pocion_curacion,te_theta']]
+    melee:[['⛊ Muralla','espada_corta,escudo_madera,cota_ferralis,yelmo_guerra,pocion_curacion,pocion_curacion'],
+           ['⚔ Duelista','estoque,cuero_endurecido,botas_cuero,pocion_curacion,antidoto']],
+    ranged:[['➳ Cazador','arco_largo,cuero_endurecido,botas_cuero,antidoto,pocion_curacion'],
+            ['◎ Tirador','ballesta,sombrero_ala,guantes_opn,pocion_curacion,antidoto']],
+    magic:[['✑ Erudito','baston_aprendiz,tunica_paralgodon,sombrero_ala,pocion_kros,te_theta'],
+           ['◗︎ Umbrío','baston_aprendiz,manto_umbra,sandalias_corcho,pocion_kros,pocion_curacion']],
+    // el Eco ve las tres vías completas, para orientarse (cada una lo viste entero):
+    wander:[['⚔ Guerrero','martillo_guerra,escudo_madera,cota_ferralis,yelmo_guerra,botas_cuero,pocion_curacion,pocion_curacion'],
+            ['➳ Arquero','arco_largo,cuero_endurecido,sombrero_ala,botas_cuero,antidoto,pocion_curacion'],
+            ['✶ Arcano','baston_aprendiz,tunica_paralgodon,sandalias_corcho,pocion_kros,te_theta,pocion_curacion']]
   };
   let _blds=BUILDS[cl]||BUILDS.melee;
-  html+='<div class="mb" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center"><span class="small c-dim">Builds sugeridas:</span>';
+  html+='<div class="mb" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center"><span class="small c-dim">Estilos sugeridos (o arma el tuyo):</span>';
   for(let [lbl,items] of _blds){
     html+=`<span class="cmd" onclick="Game.ccApplyBuild('${items}')" title="Llena el carrito con este equipo (si el oro alcanza)">${lbl}</span>`;
   }
@@ -20368,7 +20838,7 @@ function ccShop(){
   const section=(title,list,cssColor)=>{
     let items=list.filter(e=>{
       if(cl==='wander'){
-        // el vagabundo compra de todo; los focos solo si eligió esa forma
+        // el Eco compra de todo; los focos solo si eligió esa forma
         let wdef=DATA.weapons.find(w=>w.id===e.id);
         if(wdef&&wdef.focusType) return CC.magicForm===wdef.focusType;
         return true;
@@ -20657,6 +21127,20 @@ Game.startNewGame=function(){
     player.skills = player.skills || [];
     for(let sid of CC.repertoire){ if(!player.skills.includes(sid)) player.skills.push(sid); }
   }
+  // RED DE SEGURIDAD: si tras todo esto el Eco NO es mago y sigue sin habilidades
+  // (p. ej. no pasó por el paso de repertorio, o lo dejó vacío), se le dan las
+  // habilidades base de su subclase, o un repertorio marcial genérico. Así el menú
+  // de Aliento y el botón "Habilidades" SIEMPRE tienen algo que mostrar.
+  if(!_usaMagia && (!player.skills || !player.skills.length)){
+    player.skills = player.skills || [];
+    let subDef = DATA.subclasses && DATA.subclasses[CC.subclass];
+    let base = (subDef && subDef.skills && subDef.skills.length) ? subDef.skills.slice()
+             : (player.cls==='ranged' ? ['disparo_certero','apuntar','paso_atras']
+                                       : ['golpe_poderoso','postura_defensiva','embate']);
+    for(let sid of base){ if(DATA.skills[sid] && !player.skills.includes(sid)) player.skills.push(sid); }
+    // reflejarlo también en el build guardado, para herederos y recuperación
+    if(player._creationBuild){ player._creationBuild.repertoire = player.skills.slice(); }
+  }
   // perks de trasfondo: oro, pociones, pergaminos
   if(bg){
     if(bg.startGold) player.gold+=bg.startGold;
@@ -20753,7 +21237,12 @@ Game.startNewGame=function(){
   let sub=DATA.subclasses[player.subclass];
   logMsg('✦ '+player.name+', '+(lin?lin.name:'humano')+', despierta en el umbral del Limbo.','sys');
   logMsg('El Oráculo marca el ciclo de '+span2(G.cycle.name,'--rune')+' — «'+G.cycle.mean+'».','flavor');
-  logMsg('Eres '+span2(sub.name,cl.color)+', vía '+cl.name+'.','magic');
+  if(player.cls==='wander'){
+    // el jugador crea un Eco sin clase: no hay "vía X" que mencionar
+    logMsg('Eres un '+span2('Eco',cl.color)+' sin senda trazada: tú defines quién eres.','magic');
+  } else {
+    logMsg('Eres '+span2(sub.name,cl.color)+', vía '+cl.name+'.','magic');
+  }
   if(player.cls==='magic'){
     let b=DATA.branches[player.branch];
     let fc=DATA.focuses[player.focus];
@@ -20923,7 +21412,7 @@ function bindKeys(){
       handleCombatKey(k,e);
       return;
     }
-    // exploration movement
+    // exploration movement — WASD o flechas
     let moved=false;
     if(k==='w'||k==='arrowup'){tryMove(0,-1);moved=true;}
     else if(k==='s'||k==='arrowdown'){tryMove(0,1);moved=true;}
@@ -20931,13 +21420,21 @@ function bindKeys(){
     else if(k==='d'||k==='arrowright'){tryMove(1,0);moved=true;}
     else if(k==='>'||(k==='.'&&e.shiftKey)){Game.descend();}
     else if(k==='<'||(k===','&&e.shiftKey)){Game.ascend();}
-    else if(k==='e'||k==='z'||k==='k'){Game.interact();}   // A / interactuar (consola)
-    else if(k===' '){ Game.interact(); e.preventDefault(); }  // Select-ish: examinar/interactuar
-    else if(k==='r'||k==='x'||k==='l'){Game.rest();}        // B / descansar (consola)
+    // ═══ BOTÓN A (teclas Z / K): interactuar / RECOGER ═══
+    else if(k==='z'||k==='k'||k==='e'){Game.interact();}
+    else if(k===' '){ Game.interact(); e.preventDefault(); }
+    // ═══ BOTÓN B (teclas X / L): PULSAR DOS VECES RÁPIDO para DESCANSAR ═══
+    // Una sola pulsación no hace nada (evita descansos accidentales); dos seguidas
+    // dentro de 400 ms descansan. Así el descanso ya no ocupa un botón propio.
+    else if(k==='x'||k==='l'){
+      let now=Date.now();
+      if(UI._lastBTap && (now-UI._lastBTap)<400){ UI._lastBTap=0; Game.rest(); }
+      else { UI._lastBTap=now; if(typeof logMsg==='function') logMsg('Pulsa de nuevo para DESCANSAR.','flavor'); }
+    }
     else if(k==='f'){Game.search();}
-    else if(k==='enter'){ if(UI.openMasterMenu) UI.openMasterMenu(); e.preventDefault(); }  // Start: menú
+    else if(k==='enter'){ if(UI.openMasterMenu) UI.openMasterMenu(); e.preventDefault(); }  // menú maestro
     else if(k==='i'){UI.showTab('inv');}
-    else if(k==='c'){ let _s=(typeof availableSkills==='function')?availableSkills(G.player):(G.player.skills||[]); if((classUsesMagic()&&G.player.spells.length)||_s.length)UI.showTab('spells'); }
+    else if(k==='c'||k==='j'){ if(UI.openMasterMenu){ UI.openMasterMenu(); e.preventDefault(); } }  // botón MENÚ (C/J)
     else if(k==='t'){ UI.showTab('tree'); }
     if(moved)e.preventDefault();
   });
@@ -21491,7 +21988,7 @@ function showVictoryScreen(forced){
       <p class="small" style="max-width:480px;margin:8px auto;color:var(--violet)">Tu Eco se disuelve en las vueltas del espacio-tiempo. Tus pensamientos se vuelven pasillos, tus recuerdos se vuelven trampas.
       Ya no estás <span class="c-bright">en</span> el Limbo, ${p.name}: <span class="c-violet">eres</span> el Limbo. Y tienes hambre de nuevas almas.</p>
       <p class="small c-dim" style="max-width:480px;margin:8px auto;font-style:italic">Abajo, un nuevo Eco despierta donde cayó, y empieza a descender. La rueda gira. Ahora la mueves tú.</p>
-      <div class="small" style="color:var(--gold);margin-top:10px">✧ Has desbloqueado la clase «Heredero de la Anomalía».</div>
+      <div class="small" style="color:var(--gold);margin-top:10px">✧ Has desbloqueado la senda «Heredero de la Anomalía».</div>
     </div>`;
   } else {
     achId='final_canon';
@@ -21950,6 +22447,9 @@ function serializePlayer(p){
     extraDeathSave:p.extraDeathSave,
     body:p.body,
     talents:p.talents||[], pet:p.pet||null, durById:p.durById||{},
+    // ÁRBOL DE HABILIDADES: guardar puntos, nodos grabados y clase fusionada.
+    // Antes NO se guardaban, así que se perdían al continuar la partida.
+    skillPoints:p.skillPoints||0, skillNodes:p.skillNodes||[], fusedClass:p.fusedClass||null,
     stats:p.stats, level:p.level, xp:p.xp, krosLevel:p.krosLevel,
     krosXP:p.krosXP||0, magicAwakened:!!p.magicAwakened, pactTaken:!!p.pactTaken,
     grimoireBond:p.grimoireBond||{}, _preferMudras:!!p._preferMudras,
@@ -21997,6 +22497,14 @@ Game.loadGame=function(){
       body:s.player.body||p.body,
       talents:s.player.talents||[], pet:s.player.pet||null, durById:s.player.durById||{},
       grimoireBond:s.player.grimoireBond||{}, _preferMudras:!!s.player._preferMudras,
+      // ÁRBOL DE HABILIDADES: preservar los puntos y nodos grabados. Antes NO se
+      // copiaban aquí, así que al CONTINUAR una partida los puntos desaparecían.
+      // Red de seguridad: si el save es anterior al sistema (sin skillPoints), se
+      // reconstruyen desde el nivel (1 inicial + 1 por nivel ganado) menos lo gastado.
+      skillNodes:s.player.skillNodes||[],
+      fusedClass:s.player.fusedClass||null,
+      skillPoints:(s.player.skillPoints!=null)?s.player.skillPoints
+                  :Math.max(0, (1+((s.player.level||1)-1)) - (s.player.skillNodes||[]).reduce((a,nid)=>{let n=DATA.skillTree.find(x=>x.id===nid);return a+((n&&n.cost)||1);},0)),
       hp:s.player.hp,hpMax:s.player.hpMax,kros:s.player.kros,krosMax:s.player.krosMax,
       hunger:s.player.hunger||0, thirst:s.player.thirst||0, fatigue:s.player.fatigue||0, madness:s.player.madness||0,
       krosXP:s.player.krosXP||0, magicAwakened:!!s.player.magicAwakened, pactTaken:!!s.player.pactTaken,
@@ -22286,45 +22794,60 @@ Game._openGlossaryModal=function(){
 Game.openHelp=function(){
   let html=`<div style="line-height:1.7">
   <div class="c-amber mb" style="letter-spacing:2px">CÓMO JUGAR</div>
-  <p class="small">AMSALOR es un roguelike: desciende por el Limbo, una herida infinita y procedural en el espacio-tiempo, combate criaturas del CMF, sube de nivel y llega lo más profundo posible. La muerte es permanente — pero otro Eco de la sucesión hereda tu Santuario.</p>
+  <p class="small">AMSALOR es un roguelike: desciende por el Limbo, una herida infinita y procedural en el espacio-tiempo, combate criaturas del CMF, sube de nivel y llega lo más profundo posible. La muerte es permanente, pero otro Eco de la sucesión hereda tu Santuario.</p>
 
-  <hr class="divider"><div class="c-amber mb">LAS TRES CLASES</div>
+  <hr class="divider"><div class="c-amber mb">NO HAY CLASES: CREAS UN ECO</div>
+  <p class="small">No eliges una clase ni una profesión. Creas un Eco en blanco y lo moldeas a tu gusto: repartes sus atributos, escoges su repertorio de habilidades y decides si despierta o no la magia. Tú defines quién es.</p>
+  <p class="small mt">Según cómo lo moldees, tu Eco puede inclinarse hacia distintos estilos:</p>
   <div class="small">
-    <div class="stat-row"><span class="lbl" style="color:var(--red)">† Cuerpo a Cuerpo</span><span class="val c-dim">acero y vida. Sin magia: usa Aliento y habilidades</span></div>
-    <div class="stat-row"><span class="lbl" style="color:var(--violet)">✦ Magia</span><span class="val c-dim">Kros, calor y ψ. Mago, Hechicero o Brujo</span></div>
-    <div class="stat-row"><span class="lbl" style="color:var(--green)">➶︎ Distancia</span><span class="val c-dim">arcos y precisión. Golpea primero</span></div>
+    <div class="stat-row"><span class="lbl" style="color:var(--red)">† Cuerpo a cuerpo</span><span class="val c-dim">acero y vida; usa Aliento y habilidades</span></div>
+    <div class="stat-row"><span class="lbl" style="color:var(--green)">➶︎ Distancia</span><span class="val c-dim">arcos y precisión; golpea primero</span></div>
+    <div class="stat-row"><span class="lbl" style="color:var(--violet)">✦ Magia</span><span class="val c-dim">Kros y calor, si eliges despertarla</span></div>
   </div>
-  <p class="small mt">Eliges una clase + una especialidad al crear tu personaje. Las demás se desbloquean con el juego. Si no quieres usar magia, no tienes por qué: Guerrero, Berserker, Arquero y los demás son plenamente viables sin un solo hechizo.</p>
+  <p class="small mt">Nada te obliga a usar magia: un Eco puede recorrer todo el Limbo solo con acero, aliento y astucia. Y nada te encierra en un único estilo: puedes mezclarlos como quieras.</p>
 
-  <hr class="divider"><div class="c-amber mb">EXPLORACIÓN — TECLADO (PC)</div>
+  <hr class="divider"><div class="c-amber mb">EXPLORACIÓN EN EL TELÉFONO</div>
+  <p class="small">En el móvil tienes un mando en la parte de abajo, con la disposición de una consola:</p>
+  <div class="small">
+    <div class="stat-row"><span class="lbl">Cruceta (▲ ◀ ▶ ▼)</span><span class="val c-dim">te mueves por el mapa, una casilla por toque</span></div>
+    <div class="stat-row"><span class="lbl">Botón A — "usar"</span><span class="val c-dim">interactúa o recoge; se ilumina cuando hay algo cerca</span></div>
+    <div class="stat-row"><span class="lbl">Botón B — "descanso"</span><span class="val c-dim">tócalo dos veces seguidas para descansar</span></div>
+    <div class="stat-row"><span class="lbl">Select — "examinar"</span><span class="val c-dim">inspecciona lo que te rodea</span></div>
+    <div class="stat-row"><span class="lbl">Start — "menú"</span><span class="val c-dim">abre el menú principal</span></div>
+  </div>
+  <p class="small c-dim mt">Arriba del mapa está tu franja de estado (vida, aliento, hambre, sed, sueño y demás), siempre a la vista. Debajo del mapa aparece la crónica con lo que va pasando.</p>
+
+  <hr class="divider"><div class="c-amber mb">EXPLORACIÓN CON TECLADO (PC)</div>
   <div class="small">
     <div class="stat-row"><span class="lbl">Mover</span><span class="val">${kbdHtml('W')}${kbdHtml('A')}${kbdHtml('S')}${kbdHtml('D')} o flechas</span></div>
-    <div class="stat-row"><span class="lbl">Bajar / subir escalera</span><span class="val">${kbdHtml('&gt;')} / ${kbdHtml('&lt;')}</span></div>
-    <div class="stat-row"><span class="lbl">Interactuar (cofre/altar) · botón A</span><span class="val">${kbdHtml('E')} · ${kbdHtml('Z')} · ${kbdHtml('K')}</span></div>
-    <div class="stat-row"><span class="lbl">Descansar · botón B</span><span class="val">${kbdHtml('R')} · ${kbdHtml('X')} · ${kbdHtml('L')}</span></div>
+    <div class="stat-row"><span class="lbl">Bajar o subir escalera</span><span class="val">${kbdHtml('&gt;')} / ${kbdHtml('&lt;')}</span></div>
+    <div class="stat-row"><span class="lbl">Interactuar (botón A)</span><span class="val">${kbdHtml('E')} · ${kbdHtml('Z')} · ${kbdHtml('K')}</span></div>
+    <div class="stat-row"><span class="lbl">Descansar (botón B)</span><span class="val">${kbdHtml('R')} · ${kbdHtml('X')} · ${kbdHtml('L')}</span></div>
     <div class="stat-row"><span class="lbl">Examinar alrededores</span><span class="val">${kbdHtml('F')}</span></div>
     <div class="stat-row"><span class="lbl">Menú (Start)</span><span class="val">${kbdHtml('Enter')}</span></div>
-    <div class="stat-row"><span class="lbl">Inventario / Hechizos·Habilidades</span><span class="val">${kbdHtml('I')} / ${kbdHtml('C')}</span></div>
+    <div class="stat-row"><span class="lbl">Inventario · Hechizos y habilidades</span><span class="val">${kbdHtml('I')} / ${kbdHtml('C')}</span></div>
   </div>
-  <p class="small c-dim mt">Estilo consola: mueves con flechas o WASD, ${kbdHtml('Z')}/${kbdHtml('X')} (o ${kbdHtml('K')}/${kbdHtml('L')}) son los dos botones de acción, y ${kbdHtml('Enter')} abre el menú.</p>
+  <p class="small c-dim mt">Estilo consola: te mueves con las flechas o con WASD; ${kbdHtml('Z')} y ${kbdHtml('X')} (o ${kbdHtml('K')} y ${kbdHtml('L')}) son los dos botones de acción, y ${kbdHtml('Enter')} abre el menú.</p>
 
   <hr class="divider"><div class="c-amber mb">COMBATE</div>
-  <p class="small">El combate es por turnos y estático: tú y los enemigos permanecéis en vuestro sitio (estilo Pokémon). En tu turno eliges una acción del menú. El orden lo marca la iniciativa (Destreza y velocidad).</p>
+  <p class="small">El combate es por turnos y estático: tú y los enemigos permanecéis en vuestro sitio, al estilo de Pokémon. En tu turno eliges una acción. El orden lo marca la iniciativa, que depende de tu Destreza y de la velocidad.</p>
+  <p class="small">La pantalla de combate se organiza así: arriba, el <b>eje táctico</b> con las posiciones de cada uno; debajo, la lista de <b>combatientes</b> con su vida y sus estados; luego <b>tu ficha</b> con las barras; y la <b>crónica</b> (a la derecha en PC, abajo en el teléfono). Cuando hay efectos activos, aparece una lista de <b>estados</b> que explica qué hace cada uno.</p>
   <div class="small">
     <div class="stat-row"><span class="lbl">${kbdHtml('A')} / ${kbdHtml('Z')} / ${kbdHtml('1')} Atacar</span><span class="val c-dim">con tu arma equipada</span></div>
-    <div class="stat-row"><span class="lbl">${kbdHtml('H')} / ${kbdHtml('X')} / ${kbdHtml('2')} Habilidad</span><span class="val c-dim">gasta Aliento (o ${kbdHtml('3')} Hechizo: Kros)</span></div>
+    <div class="stat-row"><span class="lbl">${kbdHtml('H')} / ${kbdHtml('X')} / ${kbdHtml('2')} Habilidad</span><span class="val c-dim">gasta Aliento (o ${kbdHtml('3')} Hechizo, que gasta Kros)</span></div>
     <div class="stat-row"><span class="lbl">${kbdHtml('O')} / ${kbdHtml('4')} Objeto</span><span class="val c-dim">usar un consumible</span></div>
-    <div class="stat-row"><span class="lbl">${kbdHtml('D')} / ${kbdHtml('5')} Defender</span><span class="val c-dim">reduce daño y recupera recursos</span></div>
+    <div class="stat-row"><span class="lbl">${kbdHtml('D')} / ${kbdHtml('5')} Defender</span><span class="val c-dim">reduce el daño y recupera recursos</span></div>
     <div class="stat-row"><span class="lbl">${kbdHtml('N')} / ${kbdHtml('6')} Analizar</span><span class="val c-dim">inspecciona al enemigo (acción libre)</span></div>
-    <div class="stat-row"><span class="lbl">${kbdHtml('P')} Postura · ${kbdHtml('U')} Huir</span><span class="val c-dim">◂ ▸ o flechas: avanzar / retroceder</span></div>
+    <div class="stat-row"><span class="lbl">${kbdHtml('P')} Postura · ${kbdHtml('U')} Huir</span><span class="val c-dim">cambia tu guardia o intenta escapar</span></div>
+    <div class="stat-row"><span class="lbl">Moverte (◂ atrás · adelante ▸)</span><span class="val c-dim">acércate o aléjate; gasta el turno</span></div>
   </div>
-  <p class="small mt">Dentro de un submenú (habilidades, hechizos, objetos, objetivo), pulsa ${kbdHtml('1')}–${kbdHtml('9')} para elegir la opción n-ésima al instante. También puedes usar el ratón o, en móvil, tocar los botones.</p>
+  <p class="small mt">Los botones de moverte están en su propia fila, encima de las acciones. Dentro de un submenú (habilidades, hechizos, objetos u objetivo) puedes pulsar ${kbdHtml('1')} a ${kbdHtml('9')} para elegir una opción al instante. También puedes usar el ratón o, en el teléfono, tocar los botones.</p>
 
   <hr class="divider"><div class="c-amber mb">SÍMBOLOS DEL MAPA</div>
-  <p class="small c-dim" style="margin-bottom:8px">Qué significa cada carácter que ves explorando el Limbo:</p>
+  <p class="small c-dim" style="margin-bottom:8px">Qué significa cada carácter que ves mientras exploras el Limbo:</p>
   ${Game.openMapLegend()}
 
-  <hr class="divider"><div class="small c-dim">Consejo: si eres mago, vigila tu <span class="c-amber">CALOR</span>; pasar el Umbral corrompe tus hechizos. Si eres guerrero o arquero, gestiona tu <span class="c-green">ALIENTO</span> entre habilidades y ataques básicos. Y recuerda la <span class="c-gold">Regla de los Tres Umbrales</span> del Armonix.</div>
+  <hr class="divider"><div class="small c-dim">Consejo: si eres mago, vigila tu <span class="c-amber">CALOR</span>, porque pasar el Umbral corrompe tus hechizos. Si eres guerrero o arquero, gestiona tu <span class="c-green">ALIENTO</span> entre las habilidades y los ataques básicos. Y recuerda la <span class="c-gold">Regla de los Tres Umbrales</span> del Armonix.</div>
   </div>`;
   return html;
 };
@@ -22427,7 +22950,7 @@ UI.touchMove=function(dx,dy){
 function renderTouchActions(){
   let el=document.getElementById('touchActions');
   if(!el)return;
-  if(!G||!G.player){ el.innerHTML=''; return; }
+  if(!G||!G.player){ el.innerHTML=''; let _sr=document.getElementById('touchSysRow'); if(_sr)_sr.innerHTML=''; return; }
   let p=G.player;
   // ¿hay algo con qué interactuar aquí o al lado? (para resaltar el botón A)
   let f=G.features?G.features.find(ff=>ff.x===p.x&&ff.y===p.y):null;
@@ -22441,17 +22964,29 @@ function renderTouchActions(){
     return false;
   }
   let _canAct = !!f || _adjacentInteractable();
-  // LAYOUT FIJO ESTILO CONSOLA: cuatro botones que NUNCA cambian de tamaño ni de
-  // posición. El botón A solo cambia de COLOR cuando hay algo con qué interactuar
-  // (antes cambiaba su texto "Tocar"→"¡Interactuar!" y crecía, desalineando todo).
-  //   A = Interactuar · B = Descansar · SELECT = Examinar · START = Menú
-  let html='';
-  html+=`<div class="tcbtn tc-a${_canAct?' hot':''}" onclick="Game.interact()"><span class="tc-face">A</span><span class="tc-lbl">Interactuar</span></div>`;
-  html+=`<div class="tcbtn tc-b" onclick="Game.rest()"><span class="tc-face">B</span><span class="tc-lbl">Descansar</span></div>`;
-  html+=`<div class="tcbtn tc-sel" onclick="Game.search()"><span class="tc-face">◄►</span><span class="tc-lbl">Examinar</span></div>`;
-  html+=`<div class="tcbtn tc-start" onclick="UI.openMobileMenu()"><span class="tc-face">☰</span><span class="tc-lbl">Menú</span></div>`;
-  el.innerHTML=html;
+  // GAMEPAD estilo consola (boceto del usuario):
+  //   caras A/B redondas (A "usar" se ilumina si hay interacción; B "descanso" =
+  //   doble-toque) + fila de sistema Select "examinar" / Start "menú ☰".
+  let faces=document.getElementById('touchActions');
+  if(faces){
+    faces.innerHTML =
+      `<div class="face a${_canAct?' hot':''}" onclick="Game.interact()">A<span class="lbl">${_canAct?'usar':'usar'}</span></div>`+
+      `<div class="face b" onclick="UI.touchB()">B<span class="lbl">descanso</span></div>`;
+  }
+  let sysrow=document.getElementById('touchSysRow');
+  if(sysrow){
+    sysrow.innerHTML =
+      `<div class="sysbtn" onclick="Game.search()">Select<span class="s">examinar</span></div>`+
+      `<div class="sysbtn" onclick="UI.openMobileMenu()">Start<span class="s">menú ☰</span></div>`;
+  }
 }
+// BOTÓN B en móvil: dos toques rápidos (dentro de 500 ms) para descansar. Un solo
+// toque avisa; así el descanso nunca ocurre por accidente.
+UI.touchB=function(){
+  let now=Date.now();
+  if(UI._lastBTap && (now-UI._lastBTap)<500){ UI._lastBTap=0; if(typeof Game!=='undefined')Game.rest(); }
+  else { UI._lastBTap=now; if(typeof logMsg==='function') logMsg('Toca B otra vez para DESCANSAR.','flavor'); }
+};
 
 // ---------- ABRIR PANELES COMO MODAL (móvil) ----------
 UI.openMobilePanel=function(which){
@@ -22709,7 +23244,8 @@ function renderMinimap(){
     out+=row+'\n';
   }
   el.className='on';
-  el.innerHTML='<span class="mm-t">PISO '+(G.depth||0)+'  ·  @ tú  ·  &gt; bajada</span>'+out;
+  let _mmFloor = (typeof localDepth==='function')?localDepth():(G.depth||0);
+  el.innerHTML='<span class="mm-t">PISO '+_mmFloor+'  ·  @ tú  ·  &gt; bajada</span>'+out;
 }
 window.renderMinimap=renderMinimap;
 
